@@ -440,21 +440,13 @@ public class ZooUtil {
   }
 
   public static String putEphemeralData(ZooKeeperConnectionInfo info, String zPath, byte[] data) throws KeeperException, InterruptedException {
-    final Retry retry = RETRY_FACTORY.create();
-    while (true) {
-      try {
-        return getZooKeeper(info).create(zPath, data, ZooUtil.PUBLIC, CreateMode.EPHEMERAL);
-      } catch (KeeperException e) {
-        final Code c = e.code();
-        if (c == Code.CONNECTIONLOSS || c == Code.OPERATIONTIMEOUT || c == Code.SESSIONEXPIRED) {
-          retryOrThrow(retry, e);
-        } else {
-          throw e;
-        }
-      }
+    return putEphemeralData(info, zPath, data, NodeExistsPolicy.FAIL);
+  }
 
-      retry.waitForNextAttempt();
-    }
+  public static String putEphemeralData(ZooKeeperConnectionInfo info, String zPath, byte[] data, NodeExistsPolicy policy) throws KeeperException,
+      InterruptedException {
+    putData(info, zPath, data, CreateMode.EPHEMERAL, -1, policy, ZooUtil.PUBLIC);
+    return zPath;
   }
 
   public static String putEphemeralSequential(ZooKeeperConnectionInfo info, String zPath, byte[] data) throws KeeperException, InterruptedException {

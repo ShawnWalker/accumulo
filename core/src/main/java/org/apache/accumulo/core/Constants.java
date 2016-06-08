@@ -66,6 +66,10 @@ public class Constants {
   public static final String ZDEAD = "/dead";
   public static final String ZDEADTSERVERS = ZDEAD + "/tservers";
 
+  public static final String ZLASTALIVE = "/last_seen";
+  public static final String ZLASTALIVE_MASTER = ZLASTALIVE + "/master";
+  public static final String ZLASTALIVE_TSERVERS = ZLASTALIVE + "/tservers";
+
   public static final String ZTRACERS = "/tracers";
 
   public static final String ZPROBLEMS = "/problems";

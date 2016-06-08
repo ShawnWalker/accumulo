@@ -92,6 +92,10 @@ import org.apache.hadoop.io.Text;
 import org.apache.thrift.TException;
 
 import com.google.common.collect.Iterators;
+import java.util.Objects;
+import org.apache.accumulo.core.conf.Property;
+import org.apache.accumulo.server.conf.TableConfiguration;
+import org.apache.accumulo.server.util.time.LastAlive;
 
 class TabletGroupWatcher extends Daemon {
   // Constants used to make sure assignment logging isn't excessive in quantity or size
@@ -141,6 +145,7 @@ class TabletGroupWatcher extends Daemon {
       int totalUnloaded = 0;
       int unloaded = 0;
       ClosableIterator<TabletLocationState> iter = null;
+
       try {
         Map<String,MergeStats> mergeStatsCache = new HashMap<String,MergeStats>();
         Map<String,MergeStats> currentMerges = new HashMap<String,MergeStats>();
@@ -174,8 +179,12 @@ class TabletGroupWatcher extends Daemon {
         MasterState masterState = master.getMasterState();
         int[] counts = new int[TabletState.values().length];
         stats.begin();
+
         // Walk through the tablets in our store, and work tablets
         // towards their goal
+        TableConfiguration tableConf = null;
+        String confTableId = null;
+
         iter = store.iterator();
         while (iter.hasNext()) {
           TabletLocationState tls = iter.next();
@@ -201,6 +210,10 @@ class TabletGroupWatcher extends Daemon {
             eventListener.waitForEvents(Master.TIME_TO_WAIT_BETWEEN_SCANS);
           }
           String tableId = tls.extent.getTableId();
+          if (confTableId == null || !Objects.equals(tableId, confTableId)) {
+            tableConf = this.master.getConfigurationFactory().getTableConfiguration(tableId);
+            confTableId = tableId;
+          }
           MergeStats mergeStats = mergeStatsCache.get(tableId);
           if (mergeStats == null) {
             mergeStats = currentMerges.get(tableId);
@@ -230,6 +243,26 @@ class TabletGroupWatcher extends Daemon {
             if (this.master.serversToShutdown.equals(currentTServers.keySet())) {
               if (dependentWatcher != null && dependentWatcher.assignedOrHosted() > 0) {
                 goal = TabletGoalState.HOSTED;
+              }
+            }
+          }
+
+          // Depending on configuration, potentially allow a tablet to remain unassigned for a while to avoid
+          // location cache and locality thrashing.
+          if (state == TabletState.UNASSIGNED && tls.last != null && this.master.migrations.get(tls.extent) == null) {
+            Long tserverLastAlive = LastAlive.getInstance().getTserverLastAlive(tls.last.getLocation());
+            if (tserverLastAlive != null
+                && Math.abs(tserverLastAlive - System.currentTimeMillis()) < tableConf.getTimeInMillis(Property.MASTER_TABLET_REASSIGNMENT_THRESHOLD)) {
+              TServerInstance fakeInstance = new TServerInstance(tls.last.getLocation(), " ");
+              Iterator<TServerInstance> find = destinations.tailMap(fakeInstance).keySet().iterator();
+              if (find.hasNext()) {
+                TServerInstance alive = find.next();
+                if (!alive.getLocation().equals(tls.last.getLocation())) {
+                  // Tablet is unassigned, not undergoing migration;
+                  // Last tserver hasn't been gone long, and isn't yet back.
+                  // Leave the tablet unassigned for a while longer.
+                  goal = TabletGoalState.UNASSIGNED;
+                }
               }
             }
           }

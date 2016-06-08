@@ -95,6 +95,11 @@ public class ZooReaderWriter extends ZooReader implements IZooReaderWriter {
   }
 
   @Override
+  public String putEphemeralData(String zPath, byte[] data, NodeExistsPolicy policy) throws KeeperException, InterruptedException {
+    return ZooUtil.putEphemeralData(info, zPath, data, policy);
+  }
+
+  @Override
   public String putEphemeralSequential(String zPath, byte[] data) throws KeeperException, InterruptedException {
     return ZooUtil.putEphemeralSequential(info, zPath, data);
   }

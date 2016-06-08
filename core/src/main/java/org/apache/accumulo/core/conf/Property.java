@@ -229,6 +229,9 @@ public enum Property {
       "Minimum number of threads dedicated to answering coordinator requests"),
   MASTER_REPLICATION_COORDINATOR_THREADCHECK("master.replication.coordinator.threadcheck.time", "5s", PropertyType.TIMEDURATION,
       "The time between adjustments of the coordinator thread pool"),
+  MASTER_TABLET_REASSIGNMENT_THRESHOLD("master.tablet.reassignment.threshold", "0s", PropertyType.TIMEDURATION,
+      "When a tablet server dies, the master will wait this duration for the tablet server to revive before reassigning its tablets "
+          + "to other tablet servers.  Effective resolution of this duration is approximately 2 minutes."),
   MASTER_STATUS_THREAD_POOL_SIZE("master.status.threadpool.size", "1", PropertyType.COUNT,
       "The number of threads to use when fetching the tablet server status for balancing."),
 

@@ -162,6 +162,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Iterables;
+import org.apache.accumulo.server.util.time.LastAlive;
 
 /**
  * The Master is responsible for assigning and balancing tablets to tablet servers.
@@ -964,6 +965,7 @@ public class Master extends AccumuloServerContext implements LiveTServerSet.List
         }
 
         try {
+          LastAlive.getInstance().postMasterAlive();
           wait = updateStatus();
           eventListener.waitForEvents(wait);
         } catch (Throwable t) {

@@ -16,6 +16,7 @@
  */
 package org.apache.accumulo.server.replication;
 
+import org.apache.accumulo.core.Constants;
 import org.apache.accumulo.core.replication.ReplicationConstants;
 import org.apache.accumulo.server.zookeeper.ZooReaderWriter;
 import org.apache.zookeeper.KeeperException;
@@ -36,6 +37,14 @@ public class ZooKeeperInitialization {
 
     if (!zooReaderWriter.exists(zRoot + ReplicationConstants.ZOO_WORK_QUEUE, null)) {
       zooReaderWriter.mkdirs(zRoot + ReplicationConstants.ZOO_WORK_QUEUE);
+    }
+
+    if (!zooReaderWriter.exists(zRoot + Constants.ZLASTALIVE, null)) {
+      zooReaderWriter.mkdirs(zRoot + Constants.ZLASTALIVE);
+    }
+
+    if (!zooReaderWriter.exists(zRoot + Constants.ZLASTALIVE_TSERVERS, null)) {
+      zooReaderWriter.mkdirs(zRoot + Constants.ZLASTALIVE_TSERVERS);
     }
   }
 }

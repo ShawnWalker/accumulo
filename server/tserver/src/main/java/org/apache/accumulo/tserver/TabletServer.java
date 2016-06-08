@@ -258,6 +258,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.net.HostAndPort;
+import org.apache.accumulo.server.util.time.LastAlive;
 
 public class TabletServer extends AccumuloServerContext implements Runnable {
 
@@ -2472,6 +2473,9 @@ public class TabletServer extends AccumuloServerContext implements Runnable {
           // wait until a message is ready to send, or a sever stop
           // was requested
           while (mm == null && !serverStopRequested) {
+            // post that we're alive
+            LastAlive.getInstance().postTserverAlive(HostAndPort.fromString(getClientAddressString()));
+
             mm = masterMessages.poll(1000, TimeUnit.MILLISECONDS);
           }
 
