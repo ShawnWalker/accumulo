@@ -96,6 +96,14 @@ public class TServerInstance implements Comparable<TServerInstance>, Serializabl
   public void clearLocation(Mutation m) {
     m.putDelete(TabletsSection.CurrentLocationColumnFamily.NAME, asColumnQualifier());
   }
+  
+  public void putStickyLocation(Mutation m) {
+    m.put(TabletsSection.StickyLocationColumnFamily.NAME, TabletsSection.StickyLocationColumnFamily.COLUMN.getColumnQualifier(), new Value(hostPort()));
+  }
+  
+  public static void clearStickyLocation(Mutation m) {
+    m.putDelete(TabletsSection.StickyLocationColumnFamily.NAME, TabletsSection.StickyLocationColumnFamily.COLUMN.getColumnQualifier());
+  }
 
   @Override
   public int compareTo(TServerInstance other) {
