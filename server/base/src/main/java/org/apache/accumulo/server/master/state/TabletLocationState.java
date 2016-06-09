@@ -16,6 +16,7 @@
  */
 package org.apache.accumulo.server.master.state;
 
+import com.google.common.net.HostAndPort;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.Set;
@@ -47,7 +48,7 @@ public class TabletLocationState {
   }
 
   public TabletLocationState(KeyExtent extent, TServerInstance future, TServerInstance current, TServerInstance last, Collection<Collection<String>> walogs,
-      boolean chopped) throws BadLocationStateException {
+      boolean chopped, HostAndPort sticky) throws BadLocationStateException {
     this.extent = extent;
     this.future = future;
     this.current = current;
@@ -59,6 +60,7 @@ public class TabletLocationState {
     if (current != null && future != null) {
       throw new BadLocationStateException(extent + " is both assigned and hosted, which should never happen: " + this, extent.getMetadataEntry());
     }
+    this.sticky = sticky;
   }
 
   final public KeyExtent extent;
@@ -67,6 +69,7 @@ public class TabletLocationState {
   final public TServerInstance last;
   final public Collection<Collection<String>> walogs;
   final public boolean chopped;
+  final public HostAndPort sticky;
 
   public TServerInstance futureOrCurrent() {
     if (current != null) {

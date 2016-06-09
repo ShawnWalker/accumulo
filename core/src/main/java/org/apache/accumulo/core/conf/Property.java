@@ -41,6 +41,7 @@ import org.slf4j.LoggerFactory;
 
 public enum Property {
   // Crypto-related properties
+  // Crypto-related properties
   @Experimental
   CRYPTO_PREFIX("crypto.", null, PropertyType.PREFIX, "Properties in this category related to the configuration of both default and custom crypto modules."),
   @Experimental
@@ -229,9 +230,6 @@ public enum Property {
       "Minimum number of threads dedicated to answering coordinator requests"),
   MASTER_REPLICATION_COORDINATOR_THREADCHECK("master.replication.coordinator.threadcheck.time", "5s", PropertyType.TIMEDURATION,
       "The time between adjustments of the coordinator thread pool"),
-  MASTER_TABLET_REASSIGNMENT_THRESHOLD("master.tablet.reassignment.threshold", "0s", PropertyType.TIMEDURATION,
-      "When a tablet server dies, the master will wait this duration for the tablet server to revive before reassigning its tablets "
-          + "to other tablet servers.  Effective resolution of this duration is approximately 2 minutes."),
   MASTER_STATUS_THREAD_POOL_SIZE("master.status.threadpool.size", "1", PropertyType.COUNT,
       "The number of threads to use when fetching the tablet server status for balancing."),
 
@@ -546,6 +544,9 @@ public enum Property {
   TABLE_SAMPLER_OPTS("table.sampler.opt.", null, PropertyType.PREFIX,
       "The property is used to set options for a sampler.  If a sample had two options like hasher and modulous, then the two properties "
           + "table.sampler.opt.hasher=${hash algorithm} and table.sampler.opt.modulous=${mod} would be set."),
+  TABLE_STICKY_TIME("table.sticky.time", "0s", PropertyType.TIMEDURATION,
+      "When a tablet server dies, the master will wait this duration for the tablet server to revive before reassigning its tablets.  "
+          + "Effective resolution of this duration is approximately 2 minutes."),
 
   // VFS ClassLoader properties
   VFS_CLASSLOADER_SYSTEM_CLASSPATH_PROPERTY(AccumuloVFSClassLoader.VFS_CLASSLOADER_SYSTEM_CLASSPATH_PROPERTY, "", PropertyType.STRING,

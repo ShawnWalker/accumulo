@@ -93,7 +93,7 @@ public class ZooTabletStateStore extends TabletStateStore {
               log.debug("root tablet log " + logEntry.filename);
             }
           }
-          TabletLocationState result = new TabletLocationState(RootTable.EXTENT, futureSession, currentSession, lastSession, logs, false);
+          TabletLocationState result = new TabletLocationState(RootTable.EXTENT, futureSession, currentSession, lastSession, logs, false, null);
           log.debug("Returning root tablet state: " + result);
           return result;
         } catch (Exception ex) {

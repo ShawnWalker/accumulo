@@ -17,7 +17,6 @@
 package org.apache.accumulo.master;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
-import static java.lang.Math.min;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -92,10 +91,14 @@ import org.apache.hadoop.io.Text;
 import org.apache.thrift.TException;
 
 import com.google.common.collect.Iterators;
-import java.util.Objects;
+import com.google.common.net.HostAndPort;
 import org.apache.accumulo.core.conf.Property;
 import org.apache.accumulo.server.conf.TableConfiguration;
 import org.apache.accumulo.server.util.time.LastAlive;
+import static java.lang.Math.min;
+import static java.lang.Math.min;
+import static java.lang.Math.min;
+import static java.lang.Math.min;
 
 class TabletGroupWatcher extends Daemon {
   // Constants used to make sure assignment logging isn't excessive in quantity or size
@@ -182,8 +185,7 @@ class TabletGroupWatcher extends Daemon {
 
         // Walk through the tablets in our store, and work tablets
         // towards their goal
-        TableConfiguration tableConf = null;
-        String confTableId = null;
+        Map<String,TableConfiguration> tableConfs = new HashMap<>();
 
         iter = store.iterator();
         while (iter.hasNext()) {
@@ -210,9 +212,8 @@ class TabletGroupWatcher extends Daemon {
             eventListener.waitForEvents(Master.TIME_TO_WAIT_BETWEEN_SCANS);
           }
           String tableId = tls.extent.getTableId();
-          if (confTableId == null || !Objects.equals(tableId, confTableId)) {
-            tableConf = this.master.getConfigurationFactory().getTableConfiguration(tableId);
-            confTableId = tableId;
+          if (!tableConfs.containsKey(tableId)) {
+            tableConfs.put(tableId, this.master.getConfigurationFactory().getTableConfiguration(tableId));
           }
           MergeStats mergeStats = mergeStatsCache.get(tableId);
           if (mergeStats == null) {
@@ -249,21 +250,12 @@ class TabletGroupWatcher extends Daemon {
 
           // Depending on configuration, potentially allow a tablet to remain unassigned for a while to avoid
           // location cache and locality thrashing.
-          if (state == TabletState.UNASSIGNED && tls.last != null && this.master.migrations.get(tls.extent) == null) {
-            Long tserverLastAlive = LastAlive.getInstance().getTserverLastAlive(tls.last.getLocation());
+          if (state == TabletState.UNASSIGNED && tls.sticky != null && this.master.migrations.get(tls.extent) == null) {
+            Long tserverLastAlive = LastAlive.getInstance().getTserverLastAlive(tls.sticky);
             if (tserverLastAlive != null
-                && Math.abs(tserverLastAlive - System.currentTimeMillis()) < tableConf.getTimeInMillis(Property.MASTER_TABLET_REASSIGNMENT_THRESHOLD)) {
-              TServerInstance fakeInstance = new TServerInstance(tls.last.getLocation(), " ");
-              Iterator<TServerInstance> find = destinations.tailMap(fakeInstance).keySet().iterator();
-              if (find.hasNext()) {
-                TServerInstance alive = find.next();
-                if (!alive.getLocation().equals(tls.last.getLocation())) {
-                  // Tablet is unassigned, not undergoing migration;
-                  // Last tserver hasn't been gone long, and isn't yet back.
-                  // Leave the tablet unassigned for a while longer.
-                  goal = TabletGoalState.UNASSIGNED;
-                }
-              }
+                && Math.abs(tserverLastAlive - System.currentTimeMillis()) < tableConfs.get(tableId).getTimeInMillis(Property.TABLE_STICKY_TIME)
+                && findLiveTserver(tls.sticky, destinations) == null) {
+              goal = TabletGoalState.UNASSIGNED;
             }
           }
 
@@ -288,6 +280,7 @@ class TabletGroupWatcher extends Daemon {
                 break;
               case UNASSIGNED:
                 // maybe it's a finishing migration
+                TServerInstance stickyDest = findLiveTserver(tls.sticky, destinations);
                 TServerInstance dest = this.master.migrations.get(tls.extent);
                 if (dest != null) {
                   // if destination is still good, assign it
@@ -298,6 +291,8 @@ class TabletGroupWatcher extends Daemon {
                     this.master.migrations.remove(tls.extent);
                     unassigned.put(tls.extent, server);
                   }
+                } else if (stickyDest != null) {
+                  assignments.add(new Assignment(tls.extent, stickyDest));
                 } else {
                   unassigned.put(tls.extent, server);
                 }
@@ -795,6 +790,8 @@ class TabletGroupWatcher extends Daemon {
 
     if (!currentTServers.isEmpty()) {
       Map<KeyExtent,TServerInstance> assignedOut = new HashMap<KeyExtent,TServerInstance>();
+      // First, assign any tservers which already know where they want to go.
+
       final StringBuilder builder = new StringBuilder(64);
       this.master.tabletBalancer.getAssignments(Collections.unmodifiableSortedMap(currentTServers), Collections.unmodifiableMap(unassigned), assignedOut);
       for (Entry<KeyExtent,TServerInstance> assignment : assignedOut.entrySet()) {
@@ -851,4 +848,19 @@ class TabletGroupWatcher extends Daemon {
     }
   }
 
+  /** Given an the hostname and port of a tserver, find a live tserver which matches, or null if there is none. */
+  private static TServerInstance findLiveTserver(HostAndPort desiredLocation, SortedMap<TServerInstance,?> destinations) {
+    if (desiredLocation == null) {
+      return null;
+    }
+    TServerInstance fakeInstance = new TServerInstance(desiredLocation, " ");
+    Iterator<TServerInstance> find = destinations.tailMap(fakeInstance).keySet().iterator();
+    if (find.hasNext()) {
+      TServerInstance alive = find.next();
+      if (alive.getLocation().equals(desiredLocation)) {
+        return alive;
+      }
+    }
+    return null;
+  }
 }

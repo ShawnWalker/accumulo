@@ -74,6 +74,7 @@ public class MetaDataStateStore extends TabletStateStore {
         Mutation m = new Mutation(assignment.tablet.getMetadataEntry());
         assignment.server.putLocation(m);
         assignment.server.clearFutureLocation(m);
+        TServerInstance.clearStickyLocation(m);
         writer.addMutation(m);
       }
     } catch (Exception ex) {
@@ -127,6 +128,7 @@ public class MetaDataStateStore extends TabletStateStore {
       for (TabletLocationState tls : tablets) {
         Mutation m = new Mutation(tls.extent.getMetadataEntry());
         if (tls.current != null) {
+          tls.current.putStickyLocation(m);
           tls.current.clearLocation(m);
           if (logsForDeadServers != null) {
             List<Path> logs = logsForDeadServers.get(tls.current);

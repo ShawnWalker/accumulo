@@ -27,6 +27,8 @@ import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.schema.Section;
 import org.apache.accumulo.core.util.ColumnFQ;
 import org.apache.hadoop.io.Text;
+import static com.google.common.base.Preconditions.checkArgument;
+import static java.util.Objects.requireNonNull;
 
 /**
  * Describes the table schema used for metadata tables
@@ -134,6 +136,14 @@ public class MetadataSchema {
      */
     public static class LastLocationColumnFamily {
       public static final Text NAME = new Text("last");
+    }
+
+    /**
+     * Column family for storing most recent location, as a hint for assignment after tserver death.
+     */
+    public static class StickyLocationColumnFamily {
+      public static final Text NAME = new Text("sticky");
+      public static final ColumnFQ COLUMN = new ColumnFQ(NAME, new Text("loc"));
     }
 
     /**
