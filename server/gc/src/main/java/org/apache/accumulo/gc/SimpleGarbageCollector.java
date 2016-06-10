@@ -111,6 +111,7 @@ import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
 import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.accumulo.server.util.time.LastAlive;
 
 public class SimpleGarbageCollector extends AccumuloServerContext implements Iface {
   private static final Text EMPTY_TEXT = new Text();
@@ -566,6 +567,17 @@ public class SimpleGarbageCollector extends AccumuloServerContext implements Ifa
       } finally {
         waLogs.stop();
       }
+
+      Span lastAlive = Trace.start("lastAlive");
+      try {
+        log.info("Trimming last_alive references");
+        LastAlive.getInstance().trimStore(getConfiguration().getTimeInMillis(Property.GC_LAST_ALIVE), TimeUnit.MILLISECONDS);
+      } catch (Exception e) {
+        log.error("{}", e.getMessage(), e);
+      } finally {
+        lastAlive.stop();
+      }
+
       gcSpan.stop();
 
       // we just made a lot of metadata changes: flush them out

@@ -16,10 +16,13 @@
  */
 package org.apache.accumulo.server.util.time;
 
+import com.google.common.cache.CacheBuilder;
+import com.google.common.cache.CacheLoader;
+import com.google.common.cache.LoadingCache;
 import com.google.common.net.HostAndPort;
 import com.google.common.primitives.Longs;
+import java.util.List;
 import java.util.Random;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import org.apache.accumulo.core.Constants;
 import org.apache.accumulo.core.zookeeper.ZooUtil;
@@ -45,11 +48,24 @@ public class LastAlive {
   /** How long to wait before posting the time to ZooKeeper again, assuming a failed write. */
   private static final long FAIL_WRITE_GRANULARITY = TimeUnit.NANOSECONDS.convert(5, TimeUnit.SECONDS);
 
+  /** When to give up on old entries. */
+  private static final long CACHE_DURATION = TimeUnit.NANOSECONDS.convert(1, TimeUnit.HOURS);
+
+  /** How many cache entries to keep, at most. */
+  private static final long CACHE_SIZE = 1000000;
+
   private final ZooReaderWriter zk = ZooReaderWriter.getInstance();
   private final String zooRoot;
 
-  private final ConcurrentHashMap<HostAndPort,NodeLastAlive> tservers = new ConcurrentHashMap<>();
   private final NodeLastAlive master;
+  private final CacheLoader<HostAndPort,NodeLastAlive> loader = new CacheLoader<HostAndPort,NodeLastAlive>() {
+    @Override
+    public NodeLastAlive load(HostAndPort tserverLocation) {
+      return new NodeLastAlive(zooRoot + Constants.ZLASTALIVE_TSERVERS + "/" + tserverLocation.toString(), false);
+    }
+  };
+  private final LoadingCache<HostAndPort,NodeLastAlive> tservers = CacheBuilder.newBuilder().expireAfterAccess(CACHE_DURATION, TimeUnit.NANOSECONDS)
+      .maximumSize(CACHE_SIZE).build(loader);
 
   private LastAlive(String instanceId) {
     this.zooRoot = ZooUtil.getRoot(instanceId);
@@ -77,19 +93,40 @@ public class LastAlive {
       // Failed to get time base posted by a master server, so we can't record the liveness of the tserver
       return;
     }
-    forTserver(tserverLocation).postAlive(masterLastAlive);
+    tservers.getUnchecked(tserverLocation).postAlive(masterLastAlive);
   }
 
   /** Determine the last time the specified tserver was alive. */
   public Long getTserverLastAlive(HostAndPort tserverLocation) throws InterruptedException {
-    return forTserver(tserverLocation).getLastAlive();
+    return tservers.getUnchecked(tserverLocation).getLastAlive();
   }
 
-  private NodeLastAlive forTserver(HostAndPort tserverLocation) {
-    if (!tservers.containsKey(tserverLocation)) {
-      tservers.putIfAbsent(tserverLocation, new NodeLastAlive(zooRoot + Constants.ZLASTALIVE_TSERVERS + "/" + tserverLocation.toString(), false));
+  /**
+   * Remove really old entries from being tracked.
+   *
+   * @param duration
+   *          How far out of sync an entry must be before it's eligible for removal
+   * @param unit
+   *          unit for the specified duration.
+   */
+  public synchronized void trimStore(long duration, TimeUnit unit) throws KeeperException, InterruptedException {
+    long threshold = TimeUnit.MILLISECONDS.convert(duration, unit);
+
+    Long masterTime = master.getLastAlive();
+    if (masterTime == null) {
+      return;
     }
-    return tservers.get(tserverLocation);
+
+    try {
+      List<String> entries = zk.getChildren(zooRoot + Constants.ZLASTALIVE_TSERVERS);
+      for (String entry : entries) {
+        String key = zooRoot + Constants.ZLASTALIVE_TSERVERS + "/" + entry;
+        long timestamp = Longs.fromByteArray(zk.getData(key, null));
+        if (Math.abs(timestamp - masterTime) > threshold) {
+          zk.delete(key, -1);
+        }
+      }
+    } catch (KeeperException ex) {}
   }
 
   /** Keep track of information per node. */

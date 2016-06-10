@@ -91,14 +91,8 @@ import org.apache.hadoop.io.Text;
 import org.apache.thrift.TException;
 
 import com.google.common.collect.Iterators;
-import com.google.common.net.HostAndPort;
 import org.apache.accumulo.core.conf.Property;
-import org.apache.accumulo.server.conf.TableConfiguration;
 import org.apache.accumulo.server.util.time.LastAlive;
-import static java.lang.Math.min;
-import static java.lang.Math.min;
-import static java.lang.Math.min;
-import static java.lang.Math.min;
 
 class TabletGroupWatcher extends Daemon {
   // Constants used to make sure assignment logging isn't excessive in quantity or size
@@ -185,7 +179,7 @@ class TabletGroupWatcher extends Daemon {
 
         // Walk through the tablets in our store, and work tablets
         // towards their goal
-        Map<String,TableConfiguration> tableConfs = new HashMap<>();
+        Map<String,Long> stickyTimes = new HashMap<>();
 
         iter = store.iterator();
         while (iter.hasNext()) {
@@ -212,9 +206,6 @@ class TabletGroupWatcher extends Daemon {
             eventListener.waitForEvents(Master.TIME_TO_WAIT_BETWEEN_SCANS);
           }
           String tableId = tls.extent.getTableId();
-          if (!tableConfs.containsKey(tableId)) {
-            tableConfs.put(tableId, this.master.getConfigurationFactory().getTableConfiguration(tableId));
-          }
           MergeStats mergeStats = mergeStatsCache.get(tableId);
           if (mergeStats == null) {
             mergeStats = currentMerges.get(tableId);
@@ -248,14 +239,31 @@ class TabletGroupWatcher extends Daemon {
             }
           }
 
-          // Depending on configuration, potentially allow a tablet to remain unassigned for a while to avoid
-          // location cache and locality thrashing.
-          if (state == TabletState.UNASSIGNED && tls.sticky != null && this.master.migrations.get(tls.extent) == null) {
-            Long tserverLastAlive = LastAlive.getInstance().getTserverLastAlive(tls.sticky);
-            if (tserverLastAlive != null
-                && Math.abs(tserverLastAlive - System.currentTimeMillis()) < tableConfs.get(tableId).getTimeInMillis(Property.TABLE_STICKY_TIME)
-                && findLiveTserver(tls.sticky, destinations) == null) {
-              goal = TabletGoalState.UNASSIGNED;
+          // If so configured, try to keep a tablet from moving off of a temporarily down tserver.
+          if (!stickyTimes.containsKey(tableId)) {
+            stickyTimes.put(tableId, this.master.getConfigurationFactory().getTableConfiguration(tableId).getTimeInMillis(Property.TABLE_STICKY_TIME));
+          }
+          TServerInstance stickyDestination = null;
+          if (tls.sticky != null) {
+            Long tserverDeathTimestamp = LastAlive.getInstance().getTserverLastAlive(tls.sticky);
+            Long tserverDeathDuration = tserverDeathTimestamp == null ? null : Math.abs(System.currentTimeMillis() - tserverDeathTimestamp);
+            if (tserverDeathDuration != null && stickyTimes.get(tableId) != 0 && tserverDeathDuration < stickyTimes.get(tableId)
+                && this.master.migrations.get(tls.extent) == null) {
+              // Try to find a live tserver with location matching the last assignment of this tablet.
+              TServerInstance fakeInstance = new TServerInstance(tls.sticky, " ");
+              Iterator<TServerInstance> find = destinations.tailMap(fakeInstance).keySet().iterator();
+              if (find.hasNext()) {
+                TServerInstance alive = find.next();
+                if (alive.getLocation().equals(tls.sticky)) {
+                  stickyDestination = alive;
+                }
+              }
+
+              // Last assigned tserver is down, but hasn't been for long. No migration in progress on tablet.
+              // Corresponding table wants sticky tablets. So just leave the tablet unassigned for a while longer.
+              if (state == TabletState.UNASSIGNED && stickyDestination == null) {
+                goal = TabletGoalState.UNASSIGNED;
+              }
             }
           }
 
@@ -280,7 +288,6 @@ class TabletGroupWatcher extends Daemon {
                 break;
               case UNASSIGNED:
                 // maybe it's a finishing migration
-                TServerInstance stickyDest = findLiveTserver(tls.sticky, destinations);
                 TServerInstance dest = this.master.migrations.get(tls.extent);
                 if (dest != null) {
                   // if destination is still good, assign it
@@ -291,8 +298,9 @@ class TabletGroupWatcher extends Daemon {
                     this.master.migrations.remove(tls.extent);
                     unassigned.put(tls.extent, server);
                   }
-                } else if (stickyDest != null) {
-                  assignments.add(new Assignment(tls.extent, stickyDest));
+                } else if (stickyDestination != null) {
+                  // possibly its tablet server was just down temporarily.
+                  assignments.add(new Assignment(tls.extent, stickyDestination));
                 } else {
                   unassigned.put(tls.extent, server);
                 }
@@ -780,7 +788,7 @@ class TabletGroupWatcher extends Daemon {
       List<TabletLocationState> assignedToDeadServers, Map<TServerInstance,List<Path>> logsForDeadServers, Map<KeyExtent,TServerInstance> unassigned)
       throws DistributedStoreException, TException, WalMarkerException {
     if (!assignedToDeadServers.isEmpty()) {
-      int maxServersToShow = min(assignedToDeadServers.size(), 100);
+      int maxServersToShow = Math.min(assignedToDeadServers.size(), 100);
       Master.log.debug(assignedToDeadServers.size() + " assigned to dead servers: " + assignedToDeadServers.subList(0, maxServersToShow) + "...");
       Master.log.debug("logs for dead servers: " + logsForDeadServers);
       store.unassign(assignedToDeadServers, logsForDeadServers);
@@ -846,21 +854,5 @@ class TabletGroupWatcher extends Daemon {
       }
       master.assignedTablet(a.tablet);
     }
-  }
-
-  /** Given an the hostname and port of a tserver, find a live tserver which matches, or null if there is none. */
-  private static TServerInstance findLiveTserver(HostAndPort desiredLocation, SortedMap<TServerInstance,?> destinations) {
-    if (desiredLocation == null) {
-      return null;
-    }
-    TServerInstance fakeInstance = new TServerInstance(desiredLocation, " ");
-    Iterator<TServerInstance> find = destinations.tailMap(fakeInstance).keySet().iterator();
-    if (find.hasNext()) {
-      TServerInstance alive = find.next();
-      if (alive.getLocation().equals(desiredLocation)) {
-        return alive;
-      }
-    }
-    return null;
   }
 }
