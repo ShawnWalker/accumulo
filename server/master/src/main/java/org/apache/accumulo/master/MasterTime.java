@@ -39,11 +39,8 @@ public class MasterTime extends TimerTask {
   private final Master master;
   private final Timer timer;
 
-  /** System.nanoTime() when we last performed a read from ZooKeeper. */
-  private long readTimeSNT;
-
-  /** ZooKeeper-reported timestamp from our last ZooKeeper read. */
-  private long readTimeZK;
+  /** Difference between time stored in ZooKeeper and System.nanoTime() when we last read from ZooKeeper. */
+  private long skewAmount;
 
   public MasterTime(Master master) throws IOException {
     this.zPath = ZooUtil.getRoot(master.getInstance()) + Constants.ZMASTER_TICK;
@@ -52,8 +49,7 @@ public class MasterTime extends TimerTask {
 
     try {
       zk.putPersistentData(zPath, "0".getBytes(StandardCharsets.UTF_8), NodeExistsPolicy.SKIP);
-      readTimeZK = Long.parseLong(new String(zk.getData(zPath, null), StandardCharsets.UTF_8));
-      readTimeSNT = System.nanoTime();
+      skewAmount = Long.parseLong(new String(zk.getData(zPath, null), StandardCharsets.UTF_8)) - System.nanoTime();
     } catch (Exception ex) {
       throw new IOException("Error updating master time", ex);
     }
@@ -65,22 +61,23 @@ public class MasterTime extends TimerTask {
   /**
    * How long has this cluster had a Master?
    *
-   * @returns Approximate total duration this cluster has had a Master, in milliseconds, or null if this information is not presently available.
+   * @returns Approximate total duration this cluster has had a Master, in milliseconds.
    */
   public synchronized long getTime() {
-    return MILLISECONDS.convert(System.nanoTime() - readTimeSNT + readTimeZK, NANOSECONDS);
+    return MILLISECONDS.convert(System.nanoTime() + skewAmount, NANOSECONDS);
   }
 
   @Override
   public void run() {
     switch (master.getMasterState()) {
+    // If we don't have the lock, periodically re-read the value in ZooKeeper, in case there's another master we're
+    // shadowing for.
       case INITIAL:
       case STOP:
         try {
-          long readTimeZKTmp = Long.parseLong(new String(zk.getData(zPath, null), StandardCharsets.UTF_8));
+          long zkTime = Long.parseLong(new String(zk.getData(zPath, null), StandardCharsets.UTF_8));
           synchronized (this) {
-            readTimeZK = readTimeZKTmp;
-            readTimeSNT = System.nanoTime();
+            skewAmount = zkTime - System.nanoTime();
           }
         } catch (Exception ex) {
           if (log.isDebugEnabled()) {
@@ -88,13 +85,14 @@ public class MasterTime extends TimerTask {
           }
         }
         break;
+      // If we do have the lock, periodically write our clock to ZooKeeper.
       case HAVE_LOCK:
       case SAFE_MODE:
       case NORMAL:
       case UNLOAD_METADATA_TABLETS:
       case UNLOAD_ROOT_TABLET:
         try {
-          zk.putPersistentData(zPath, Long.toString(System.nanoTime() - readTimeSNT + readTimeZK).getBytes(StandardCharsets.UTF_8), NodeExistsPolicy.OVERWRITE);
+          zk.putPersistentData(zPath, Long.toString(System.nanoTime() + skewAmount).getBytes(StandardCharsets.UTF_8), NodeExistsPolicy.OVERWRITE);
         } catch (Exception ex) {
           if (log.isDebugEnabled()) {
             log.debug("Failed to update master tick time", ex);

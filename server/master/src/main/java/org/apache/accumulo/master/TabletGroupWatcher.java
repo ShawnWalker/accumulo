@@ -137,8 +137,6 @@ class TabletGroupWatcher extends Daemon {
     WalStateManager wals = new WalStateManager(master.getInstance(), ZooReaderWriter.getInstance());
 
     while (this.master.stillMaster()) {
-      long masterTime = this.master.getSteadyTime();
-
       // slow things down a little, otherwise we spam the logs when there are many wake-up events
       sleepUninterruptibly(100, TimeUnit.MILLISECONDS);
       masterState = master.getMasterState();
@@ -261,7 +259,7 @@ class TabletGroupWatcher extends Daemon {
                 }
                 break;
               case SUSPENDED:
-                if (Math.abs(masterTime - tls.suspend.suspensionTime) < tableConf.getTimeInMillis(Property.TABLE_SUSPEND_DURATION)) {
+                if (Math.abs(master.getSteadyTime() - tls.suspend.suspensionTime) < tableConf.getTimeInMillis(Property.TABLE_SUSPEND_DURATION)) {
                   // Tablet is suspended. See if its tablet server is back.
                   TServerInstance returnInstance = null;
                   Iterator<TServerInstance> find = currentTServers.tailMap(new TServerInstance(tls.suspend.server, " ")).keySet().iterator();
