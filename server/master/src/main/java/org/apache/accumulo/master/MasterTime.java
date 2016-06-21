@@ -16,8 +16,8 @@
  */
 package org.apache.accumulo.master;
 
-import com.google.common.base.Charsets;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.Timer;
 import java.util.TimerTask;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
@@ -32,54 +32,55 @@ import org.slf4j.LoggerFactory;
 
 /** Keep a persistent roughly monotone view of how long a master has been overseeing this cluster. */
 public class MasterTime extends TimerTask {
-  private static final Logger log=LoggerFactory.getLogger(MasterTime.class);
-  
+  private static final Logger log = LoggerFactory.getLogger(MasterTime.class);
+
   private final String zPath;
   private final ZooReaderWriter zk;
   private final Master master;
   private final Timer timer;
 
-  /** System.nanoTime() when we last performed a read from ZooKeeper. */  
+  /** System.nanoTime() when we last performed a read from ZooKeeper. */
   private long readTimeSNT;
-  
+
   /** ZooKeeper-reported timestamp from our last ZooKeeper read. */
   private long readTimeZK;
-  
+
   public MasterTime(Master master) throws IOException {
-    this.zPath=ZooUtil.getRoot(master.getInstance())+Constants.ZMASTERS+Constants.ZMASTER_TICK;
-    this.zk=ZooReaderWriter.getInstance();
-    this.master=master;
-    
+    this.zPath = ZooUtil.getRoot(master.getInstance()) + Constants.ZMASTER_TICK;
+    this.zk = ZooReaderWriter.getInstance();
+    this.master = master;
+
     try {
-      zk.putPersistentData(zPath, "0".getBytes(Charsets.UTF_8), NodeExistsPolicy.SKIP);
-      readTimeZK=Long.parseLong(new String(zk.getData(zPath, null), Charsets.UTF_8));
-      readTimeSNT=System.nanoTime();
+      zk.putPersistentData(zPath, "0".getBytes(StandardCharsets.UTF_8), NodeExistsPolicy.SKIP);
+      readTimeZK = Long.parseLong(new String(zk.getData(zPath, null), StandardCharsets.UTF_8));
+      readTimeSNT = System.nanoTime();
     } catch (Exception ex) {
       throw new IOException("Error updating master time", ex);
     }
-    
-    this.timer=new Timer();
-    timer.schedule(this, 0, MILLISECONDS.convert(1, SECONDS));
+
+    this.timer = new Timer();
+    timer.schedule(this, 0, MILLISECONDS.convert(10, SECONDS));
   }
 
-  /** How long has this cluster had a Master? 
-   * @returns Approximate total duration this cluster has had a Master, in milliseconds, or null if this information
-   * is not presently available.
+  /**
+   * How long has this cluster had a Master?
+   *
+   * @returns Approximate total duration this cluster has had a Master, in milliseconds, or null if this information is not presently available.
    */
   public synchronized long getTime() {
-    return MILLISECONDS.convert(System.nanoTime()-readTimeSNT+readTimeZK, NANOSECONDS);
-  }  
-  
+    return MILLISECONDS.convert(System.nanoTime() - readTimeSNT + readTimeZK, NANOSECONDS);
+  }
+
   @Override
   public void run() {
     switch (master.getMasterState()) {
       case INITIAL:
       case STOP:
         try {
-          long readTimeZKTmp=Long.parseLong(new String(zk.getData(zPath, null), Charsets.UTF_8));
+          long readTimeZKTmp = Long.parseLong(new String(zk.getData(zPath, null), StandardCharsets.UTF_8));
           synchronized (this) {
-            readTimeZK=readTimeZKTmp;
-            readTimeSNT=System.nanoTime();
+            readTimeZK = readTimeZKTmp;
+            readTimeSNT = System.nanoTime();
           }
         } catch (Exception ex) {
           if (log.isDebugEnabled()) {
@@ -93,14 +94,12 @@ public class MasterTime extends TimerTask {
       case UNLOAD_METADATA_TABLETS:
       case UNLOAD_ROOT_TABLET:
         try {
-          zk.putPersistentData(zPath,
-                  Long.toString(System.nanoTime()-readTimeSNT+readTimeZK).getBytes(Charsets.UTF_8), 
-                  NodeExistsPolicy.OVERWRITE);
+          zk.putPersistentData(zPath, Long.toString(System.nanoTime() - readTimeSNT + readTimeZK).getBytes(StandardCharsets.UTF_8), NodeExistsPolicy.OVERWRITE);
         } catch (Exception ex) {
           if (log.isDebugEnabled()) {
             log.debug("Failed to update master tick time", ex);
           }
         }
     }
-  }  
+  }
 }

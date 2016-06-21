@@ -190,11 +190,12 @@ public class ZooTabletStateStore extends TabletStateStore {
   }
 
   @Override
-  public void suspend(Collection<TabletLocationState> tablets, Map<TServerInstance,List<Path>> logsForDeadServers, long suspensionTimestamp) throws DistributedStoreException {
+  public void suspend(Collection<TabletLocationState> tablets, Map<TServerInstance,List<Path>> logsForDeadServers, long suspensionTimestamp)
+      throws DistributedStoreException {
     // No support for suspending root tablet.
     unassign(tablets, logsForDeadServers);
   }
-  
+
   @Override
   public String name() {
     return "Root Table";

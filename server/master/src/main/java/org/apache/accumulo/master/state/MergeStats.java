@@ -217,7 +217,7 @@ public class MergeStats {
           return false;
         }
 
-        if (tls.getState(master.onlineTabletServers()) != TabletState.UNASSIGNED) {
+        if (tls.getState(master.onlineTabletServers()) != TabletState.UNASSIGNED && tls.getState(master.onlineTabletServers()) != TabletState.SUSPENDED) {
           log.debug("failing consistency: assigned or hosted " + tls);
           return false;
         }

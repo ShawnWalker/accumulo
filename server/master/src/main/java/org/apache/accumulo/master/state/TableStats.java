@@ -42,15 +42,6 @@ public class TableStats {
     }
     counts.counts[state.ordinal()]++;
   }
-  
-  public synchronized void incrementSuspended(String tableId) {
-    TableCounts counts = next.get(tableId);
-    if (counts == null) {
-      counts = new TableCounts();
-      next.put(tableId, counts);
-    }
-    ++counts.suspended;
-  }
 
   public synchronized void end(MasterState state) {
     last = next;

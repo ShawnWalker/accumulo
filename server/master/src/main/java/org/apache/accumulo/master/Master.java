@@ -197,7 +197,7 @@ public class Master extends AccumuloServerContext implements LiveTServerSet.List
   private WorkDriver replicationWorkAssigner;
   RecoveryManager recoveryManager = null;
   private final MasterTime timeKeeper;
-          
+
   // Delegation Token classes
   private final boolean delegationTokensAvailable;
   private ZooAuthenticationKeyDistributor keyDistributor;
@@ -592,9 +592,9 @@ public class Master extends AccumuloServerContext implements LiveTServerSet.List
 
     log.info("Version " + Constants.VERSION);
     log.info("Instance " + getInstance().getInstanceID());
-    timeKeeper=new MasterTime(this);
-    
-    ThriftTransportPool.getInstance().setIdleTime(aconf.getTimeInMillis(Property.GENERAL_RPC_TIMEOUT));    
+    timeKeeper = new MasterTime(this);
+
+    ThriftTransportPool.getInstance().setIdleTime(aconf.getTimeInMillis(Property.GENERAL_RPC_TIMEOUT));
     tserverSet = new LiveTServerSet(this, this);
     this.tabletBalancer = aconf.instantiateClassProperty(Property.MASTER_TABLET_BALANCER, TabletBalancer.class, new DefaultLoadBalancer());
     this.tabletBalancer.init(serverConfig);
@@ -629,8 +629,7 @@ public class Master extends AccumuloServerContext implements LiveTServerSet.List
       log.info("SASL is not enabled, delegation tokens will not be available");
       delegationTokensAvailable = false;
     }
-    
-    
+
   }
 
   public TServerConnection getConnection(TServerInstance server) {
@@ -1625,11 +1624,10 @@ public class Master extends AccumuloServerContext implements LiveTServerSet.List
   public void removeBulkImportStatus(String directory) {
     bulkImportStatus.removeBulkImportStatus(Collections.singletonList(directory));
   }
-  
+
   /**
-   * Return how long (in milliseconds) there has been a master overseeing this cluster.  This is an approximately
-   * monotonic clock, which will be approximately consistent between different masters or different runs of
-   * the same master.
+   * Return how long (in milliseconds) there has been a master overseeing this cluster. This is an approximately monotonic clock, which will be approximately
+   * consistent between different masters or different runs of the same master.
    */
   public Long getSteadyTime() {
     return timeKeeper.getTime();

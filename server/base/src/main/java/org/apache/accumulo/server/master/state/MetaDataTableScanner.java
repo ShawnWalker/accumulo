@@ -16,7 +16,6 @@
  */
 package org.apache.accumulo.server.master.state;
 
-import com.google.common.net.HostAndPort;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -79,6 +78,7 @@ public class MetaDataTableScanner implements ClosableIterator<TabletLocationStat
     scanner.fetchColumnFamily(TabletsSection.CurrentLocationColumnFamily.NAME);
     scanner.fetchColumnFamily(TabletsSection.FutureLocationColumnFamily.NAME);
     scanner.fetchColumnFamily(TabletsSection.LastLocationColumnFamily.NAME);
+    scanner.fetchColumnFamily(TabletsSection.SuspendLocationColumn.SUSPEND_COLUMN.getColumnFamily());
     scanner.fetchColumnFamily(LogColumnFamily.NAME);
     scanner.fetchColumnFamily(ChoppedColumnFamily.NAME);
     scanner.addScanIterator(new IteratorSetting(1000, "wholeRows", WholeRowIterator.class));
@@ -137,7 +137,7 @@ public class MetaDataTableScanner implements ClosableIterator<TabletLocationStat
     TServerInstance future = null;
     TServerInstance current = null;
     TServerInstance last = null;
-    SuspendingTServer suspend=null;
+    SuspendingTServer suspend = null;
     long lastTimestamp = 0;
     List<Collection<String>> walogs = new ArrayList<Collection<String>>();
     boolean chopped = false;
@@ -174,7 +174,7 @@ public class MetaDataTableScanner implements ClosableIterator<TabletLocationStat
       } else if (TabletsSection.TabletColumnFamily.PREV_ROW_COLUMN.equals(cf, cq)) {
         extent = new KeyExtent(row, entry.getValue());
       } else if (TabletsSection.SuspendLocationColumn.SUSPEND_COLUMN.equals(cf, cq)) {
-        suspend=SuspendingTServer.fromValue(entry.getValue());
+        suspend = SuspendingTServer.fromValue(entry.getValue());
       }
     }
     if (extent == null) {
