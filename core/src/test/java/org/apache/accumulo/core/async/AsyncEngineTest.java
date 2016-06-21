@@ -16,6 +16,7 @@
  */
 package org.apache.accumulo.core.async;
 
+import java.util.List;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
@@ -40,31 +41,20 @@ public class AsyncEngineTest {
   
   /** Do nothing for a while. */
   static AsyncFuture<Void> sleep(long duration, TimeUnit unit) {
-    AsyncPromise<Void> resultPromise=new AsyncPromise<>();
+    boolean[] cancelled=new boolean[]{true};
+    AsyncPromise<Void> resultPromise=new AsyncPromise<>(cause->{cancelled[0]=false;});
     long startNanos=System.nanoTime();
-    AsyncEngine.get().addPoll(()->{
+    AsyncEngine.getLocalEngine().poll(()->{
       if (System.nanoTime()>startNanos+TimeUnit.NANOSECONDS.convert(duration, unit)) {
         resultPromise.setValue(null);
         return false;
       } else {
-        return true;
+        return true && cancelled[0];
       }
     });
     return resultPromise.getFuture();
   }
-  
-  @Test
-  public void testSleep() throws Exception {    
-    Future<Void> result=engine.submit(DelayTolerance.TOLERANT, () -> {
-      System.out.println("Sleeping for 5 sec");
-      return sleep(5, TimeUnit.SECONDS).then( () -> {
-        System.out.println("Wait complete, shutting down");
-        return null;
-      });
-    });
-    result.get();
-  }
-  
+    
   @Test
   public void testErrorPropagation() throws Exception {
     try {
@@ -86,6 +76,39 @@ public class AsyncEngineTest {
       promise.setValue(0);
       promise.setValue(1);
       return jobFuture;
+    });
+    result.get();
+  }
+  
+  @Test
+  public void testCancellation() throws Exception {
+    Future<List<Void>> result=engine.submit(DelayTolerance.TOLERANT, () -> {
+      AsyncFuture<Void> sleep1=sleep(1, TimeUnit.SECONDS);
+      AsyncFuture<Void> sleep15=sleep(15, TimeUnit.SECONDS);
+      AsyncFuture<Void> sleep20=sleep(20, TimeUnit.SECONDS);
+      AsyncFuture<Void> first=AsyncFuture.anyOf(sleep1, sleep15, sleep20);
+      
+      first.then(()->{
+        first.cancel();
+        return null;
+      });
+      
+      AsyncFuture<Void> test1=sleep15.then(()->{
+        Assert.fail();
+        return (Void)null;
+      }).except(th -> {
+        Assert.assertEquals(CancelledException.class, th.getClass());
+        return null;
+      });
+      AsyncFuture<Void> test2=sleep20.then(() -> {
+        Assert.fail();
+        return (Void)null;
+      }).except(th -> {
+        Assert.assertEquals(CancelledException.class, th.getClass());
+        return (Void)null;
+      });
+      
+      return AsyncFuture.allAsList(test1, test2);
     });
     result.get();
   }

@@ -16,15 +16,21 @@
  */
 package org.apache.accumulo.core.async;
 
-import java.util.Collection;
-
-public enum DelayTolerance {
-  INTOLERANT_PLUS,
-  INTOLERANT,
-  TOLERANT_PLUS,
-  TOLERANT;
-  
-  public DelayTolerance ifLessTolerantThan(DelayTolerance other) {
-    return this.compareTo(other)<0?this:other;
+/** Indicates that a computation has been cancelled. */
+public class CancelledException extends Exception {
+  public CancelledException() {
   }
+
+  public CancelledException(String message) {
+    super(message);
+  }
+
+  public CancelledException(Throwable cause) {
+    super(cause);
+  }
+
+  public CancelledException(String message, Throwable cause) {
+    super(message, cause);
+  }
+
 }

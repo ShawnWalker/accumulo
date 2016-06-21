@@ -16,15 +16,11 @@
  */
 package org.apache.accumulo.core.async;
 
-import java.util.Collection;
-
-public enum DelayTolerance {
-  INTOLERANT_PLUS,
-  INTOLERANT,
-  TOLERANT_PLUS,
-  TOLERANT;
+public interface Cancellable {
+  /** Request any computation supporting this async object be cancelled. */
+  public void cancel(Throwable cause);
   
-  public DelayTolerance ifLessTolerantThan(DelayTolerance other) {
-    return this.compareTo(other)<0?this:other;
+  default public void cancel() {
+    cancel(new CancelledException());
   }
 }

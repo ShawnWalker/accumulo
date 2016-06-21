@@ -16,25 +16,25 @@
  */
 package org.apache.accumulo.core.async;
 
+import com.google.common.util.concurrent.SettableFuture;
 import java.util.ArrayDeque;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
 import java.util.function.Supplier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
+/** Single threaded scheduler for asynchronous jobs.  */
 public class AsyncEngine extends Thread {
   private static Logger log=LoggerFactory.getLogger(AsyncEngine.class);
-  private static ThreadLocal<AsyncEngine> CURRENT_ENGINE=new ThreadLocal<>();
+  private static ThreadLocal<LocalEngine> CURRENT_ENGINE=new ThreadLocal<>();
   
   private final Set<Supplier<Boolean>> pollers=new HashSet<>();
   private final ArrayDeque<Runnable>[] queues=new ArrayDeque[DelayTolerance.values().length];
-  private final ConcurrentLinkedQueue<SubmittedJob> incomingWork=new ConcurrentLinkedQueue<>();
+  private final ConcurrentLinkedQueue<IncomingJob> incomingJobs=new ConcurrentLinkedQueue<>();
   
   private DelayTolerance currentTolerance;
 
@@ -55,20 +55,31 @@ public class AsyncEngine extends Thread {
    * @param job
    * @return 
    */
-  public synchronized <T> Future<T> submit(DelayTolerance tolerance, Supplier<AsyncFuture<T>> jobSupplier) {
-    SubmittedJob<T> job=new SubmittedJob<T>(tolerance, jobSupplier);
-    incomingWork.add(job);
-    notify();
-    return job.future;
+  public <T> Future<T> submit(DelayTolerance tolerance, Supplier<AsyncFuture<T>> jobSupplier) {
+    SettableFuture<T> future=SettableFuture.create();
+    submit(new IncomingJob(tolerance, () -> {
+      try {
+        jobSupplier.get().handle((value, problem) -> {
+          if (problem==null) {
+            future.set(value);
+          } else {
+            future.setException(problem);
+          }
+          return null;
+        });
+      } catch (Exception ex) {
+        future.setException(ex);
+      }
+    }));
+    return future;
   }
-  
   
   /** 
    * Get the engine running on the current thread, or throw {@link IllegalStateException} if the current thread
    * is not controlled by an AsyncEngine.
    */
-  public static AsyncEngine get() throws AsyncEngineMissingException {
-    AsyncEngine current=CURRENT_ENGINE.get();
+  public static LocalEngine getLocalEngine() throws AsyncEngineMissingException {
+    LocalEngine current=CURRENT_ENGINE.get();
     if (current==null) {
       throw new AsyncEngineMissingException();
     } else {
@@ -76,52 +87,66 @@ public class AsyncEngine extends Thread {
     }
   }
   
-  /** Request that the engine periodically run the specified function, until it returns false */
-  void addPoll(Supplier<Boolean> poller) {
-    pollers.add(poller);
-  }
-  
-  /** Request that the engine arrange for the specified task to be run. */
-  void schedule(DelayTolerance priority, Runnable task) {
-    queues[priority.ordinal()].addLast(task);
-  }
-  
-  /** Return the tolerance of the currently running job. */
-  DelayTolerance jobTolerance() {
-    return currentTolerance;
-  }
-    
-  private static class SubmittedJob<T> implements Runnable {
-    private final DelayTolerance tolerance;
-    private final Supplier<AsyncFuture<T>> jobSupplier;
-    private final CompletableFuture<T> future;
-    
-    SubmittedJob(DelayTolerance tolerance, Supplier<AsyncFuture<T>> jobSupplier) {
-      this.tolerance=tolerance;
-      this.jobSupplier=jobSupplier;
-      this.future=new CompletableFuture();
+  /** Operations which can be executed from within the thread of the AsyncEngine. */
+  public class LocalEngine {
+    /** Request that the engine periodically run the specified function, until it returns false */
+    public void poll(Supplier<Boolean> poller) {
+      pollers.add(poller);
+    }
+
+    /** Request that the engine arrange for the specified task to be run. */
+    public void schedule(DelayTolerance priority, Runnable task) {
+      scheduleLocal(priority, task);
+    }
+
+    /** Return the tolerance of the currently running job. */
+    public DelayTolerance getCurrentTolerance() {
+      return currentTolerance;
     }
     
-    void schedule(AsyncEngine engine) {
-      engine.schedule(tolerance, this);
-    }
-    
-    @Override
-    public void run() {
-      jobSupplier.get().handle((value, problem) -> {
-        if (problem!=null) {
-          this.future.completeExceptionally(problem);
-        } else {
-          this.future.complete(value);
+    /** Submit a job to another engine. */
+    public <T> AsyncFuture<T> submitTo(AsyncEngine otherEngine, Supplier<AsyncFuture<T>> jobSupplier) {
+      AsyncPromise<T> promise=new AsyncPromise<>();
+      DelayTolerance curTol=getCurrentTolerance();
+      otherEngine.submit(new IncomingJob(curTol, () -> {
+        try {
+          jobSupplier.get().handle((value, problem) -> {
+            submit(new IncomingJob(DelayTolerance.INTOLERANT_PLUS, () -> {
+              promise.setResult(value, problem);
+            }));
+            return null;
+          });
+        } catch (Exception ex) {
+          submit(new IncomingJob(DelayTolerance.INTOLERANT_PLUS, () -> {
+            promise.setException(ex);
+          }));
         }
-        return null;
-      });
+      }));
+      return promise.getFuture();
     }
+  }
+
+  private static class IncomingJob {
+    private final DelayTolerance tolerance;
+    private final Runnable runnable;
+    IncomingJob(DelayTolerance tolerance, Runnable runnable) {
+      this.tolerance=tolerance;
+      this.runnable=runnable;
+    }
+  }
+  
+  protected void scheduleLocal(DelayTolerance tolerance, Runnable job) {
+    queues[tolerance.ordinal()].addLast(job);    
+  }
+  
+  protected synchronized void submit(IncomingJob job) {
+    incomingJobs.add(job);
+    notify();
   }
   
   @Override
   public void run() {
-    CURRENT_ENGINE.set(this);
+    CURRENT_ENGINE.set(new LocalEngine());
     while (true) {
       if (isInterrupted()) {
         interrupt();
@@ -141,9 +166,9 @@ public class AsyncEngine extends Thread {
       }
       boolean hadWork=false;
       // Drain the incoming job pool
-      for (SubmittedJob incomingJob=incomingWork.poll(); incomingJob!=null; incomingJob=incomingWork.poll()) {
+      for (IncomingJob incomingJob=incomingJobs.poll(); incomingJob!=null; incomingJob=incomingJobs.poll()) {
         hadWork=true;
-        incomingJob.schedule(this);
+        scheduleLocal(incomingJob.tolerance, incomingJob.runnable);
       }
       for (int queueNum=0;queueNum<queues.length;++queueNum) {
         currentTolerance=DelayTolerance.values()[queueNum];
@@ -161,7 +186,7 @@ public class AsyncEngine extends Thread {
       }
       if (!hadWork) {
         synchronized (this) {
-          if (incomingWork.isEmpty()) {
+          if (incomingJobs.isEmpty()) {
             try {
               wait(10);
             } catch (InterruptedException ex) {
