@@ -74,6 +74,7 @@ public class MetaDataStateStore extends TabletStateStore {
         Mutation m = new Mutation(assignment.tablet.getMetadataEntry());
         assignment.server.putLocation(m);
         assignment.server.clearFutureLocation(m);
+        SuspendingTServer.clearSuspension(m);
         writer.addMutation(m);
       }
     } catch (Exception ex) {
@@ -118,10 +119,14 @@ public class MetaDataStateStore extends TabletStateStore {
       }
     }
   }
-
+  
   @Override
   public void unassign(Collection<TabletLocationState> tablets, Map<TServerInstance,List<Path>> logsForDeadServers) throws DistributedStoreException {
+    suspend(tablets, logsForDeadServers, -1);
+  }
 
+  @Override
+  public void suspend(Collection<TabletLocationState> tablets, Map<TServerInstance,List<Path>> logsForDeadServers, long suspensionTimestamp) throws DistributedStoreException {
     BatchWriter writer = createBatchWriter();
     try {
       for (TabletLocationState tls : tablets) {
@@ -136,6 +141,10 @@ public class MetaDataStateStore extends TabletStateStore {
                 m.put(entry.getColumnFamily(), entry.getColumnQualifier(), entry.getValue());
               }
             }
+          }
+          if (suspensionTimestamp>=0) {
+            SuspendingTServer suspender=new SuspendingTServer(tls.current.getLocation(), suspensionTimestamp);
+            suspender.setSuspension(m);
           }
         }
         if (tls.future != null) {

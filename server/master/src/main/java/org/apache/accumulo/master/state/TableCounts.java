@@ -20,7 +20,8 @@ import org.apache.accumulo.server.master.state.TabletState;
 
 public class TableCounts {
   int counts[] = new int[TabletState.values().length];
-
+  int suspended = 0;
+  
   public int unassigned() {
     return counts[TabletState.UNASSIGNED.ordinal()];
   }
@@ -35,5 +36,9 @@ public class TableCounts {
 
   public int hosted() {
     return counts[TabletState.HOSTED.ordinal()];
+  }
+  
+  public int suspended() {
+    return suspended;
   }
 }

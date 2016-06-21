@@ -16,6 +16,7 @@
  */
 package org.apache.accumulo.server.master.state;
 
+import com.google.common.net.HostAndPort;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -136,6 +137,7 @@ public class MetaDataTableScanner implements ClosableIterator<TabletLocationStat
     TServerInstance future = null;
     TServerInstance current = null;
     TServerInstance last = null;
+    SuspendingTServer suspend=null;
     long lastTimestamp = 0;
     List<Collection<String>> walogs = new ArrayList<Collection<String>>();
     boolean chopped = false;
@@ -171,6 +173,8 @@ public class MetaDataTableScanner implements ClosableIterator<TabletLocationStat
         chopped = true;
       } else if (TabletsSection.TabletColumnFamily.PREV_ROW_COLUMN.equals(cf, cq)) {
         extent = new KeyExtent(row, entry.getValue());
+      } else if (TabletsSection.SuspendLocationColumn.SUSPEND_COLUMN.equals(cf, cq)) {
+        suspend=SuspendingTServer.fromValue(entry.getValue());
       }
     }
     if (extent == null) {
@@ -178,7 +182,7 @@ public class MetaDataTableScanner implements ClosableIterator<TabletLocationStat
       log.error(msg);
       throw new BadLocationStateException(msg, k.getRow());
     }
-    return new TabletLocationState(extent, future, current, last, walogs, chopped);
+    return new TabletLocationState(extent, future, current, last, suspend, walogs, chopped);
   }
 
   private TabletLocationState fetch() {

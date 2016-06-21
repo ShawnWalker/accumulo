@@ -135,7 +135,14 @@ public class MetadataSchema {
     public static class LastLocationColumnFamily {
       public static final Text NAME = new Text("last");
     }
-
+    
+    /**
+     * Column family for storing suspension location, as a demand for assignment.
+     */
+    public static class SuspendLocationColumn {
+      public static final ColumnFQ SUSPEND_COLUMN = new ColumnFQ(new Text("suspend"),new Text("loc"));
+    }
+    
     /**
      * Temporary markers that indicate a tablet loaded a bulk file
      */

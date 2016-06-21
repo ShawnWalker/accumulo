@@ -93,7 +93,7 @@ public class ZooTabletStateStore extends TabletStateStore {
               log.debug("root tablet log " + logEntry.filename);
             }
           }
-          TabletLocationState result = new TabletLocationState(RootTable.EXTENT, futureSession, currentSession, lastSession, logs, false);
+          TabletLocationState result = new TabletLocationState(RootTable.EXTENT, futureSession, currentSession, lastSession, null, logs, false);
           log.debug("Returning root tablet state: " + result);
           return result;
         } catch (Exception ex) {
@@ -189,6 +189,12 @@ public class ZooTabletStateStore extends TabletStateStore {
     log.debug("unassign root tablet location");
   }
 
+  @Override
+  public void suspend(Collection<TabletLocationState> tablets, Map<TServerInstance,List<Path>> logsForDeadServers, long suspensionTimestamp) throws DistributedStoreException {
+    // No support for suspending root tablet.
+    unassign(tablets, logsForDeadServers);
+  }
+  
   @Override
   public String name() {
     return "Root Table";
