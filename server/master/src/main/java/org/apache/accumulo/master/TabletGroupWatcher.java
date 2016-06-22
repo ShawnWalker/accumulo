@@ -97,22 +97,22 @@ import static java.lang.Math.min;
 
 class TabletGroupWatcher extends Daemon {
   public static enum SuspensionPolicy {
-    UNASSIGN,
-    SUSPEND
+    UNASSIGN, SUSPEND
   }
+
   // Constants used to make sure assignment logging isn't excessive in quantity or size
   private static final String ASSIGNMENT_BUFFER_SEPARATOR = ", ";
   private static final int ASSINGMENT_BUFFER_MAX_LENGTH = 4096;
 
-  private final Master master;  
+  private final Master master;
   final TabletStateStore store;
   final TabletGroupWatcher dependentWatcher;
-  /** 
-   * When false, move tablets in state {@code TabletState.ASSIGNED_TO_DEAD_SERVER} to state {@code TabletState.UNASSIGNED}.
-   * When true, move such tablets to state {@code TabletState.SUSPENDED}.
+  /**
+   * When false, move tablets in state {@code TabletState.ASSIGNED_TO_DEAD_SERVER} to state {@code TabletState.UNASSIGNED}. When true, move such tablets to
+   * state {@code TabletState.SUSPENDED}.
    */
   private final SuspensionPolicy suspensionPolicy;
-  
+
   private MasterState masterState;
 
   final TableStats stats = new TableStats();
@@ -121,7 +121,7 @@ class TabletGroupWatcher extends Daemon {
     this.master = master;
     this.store = store;
     this.dependentWatcher = dependentWatcher;
-    this.suspensionPolicy=suspensionPolicy;
+    this.suspensionPolicy = suspensionPolicy;
   }
 
   Map<String,TableCounts> getStats() {

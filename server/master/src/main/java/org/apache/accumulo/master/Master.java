@@ -562,14 +562,14 @@ public class Master extends AccumuloServerContext implements LiveTServerSet.List
       case SAFE_MODE:
         // Count offline tablets for the metadata table
         for (TabletGroupWatcher watcher : watchers) {
-          TableCounts counts=watcher.getStats(MetadataTable.ID);
+          TableCounts counts = watcher.getStats(MetadataTable.ID);
           result += counts.unassigned() + counts.suspended();
         }
         break;
       case UNLOAD_METADATA_TABLETS:
       case UNLOAD_ROOT_TABLET:
         for (TabletGroupWatcher watcher : watchers) {
-          TableCounts counts=watcher.getStats(MetadataTable.ID);
+          TableCounts counts = watcher.getStats(MetadataTable.ID);
           result += counts.unassigned() + counts.suspended();
         }
         break;
@@ -1142,13 +1142,13 @@ public class Master extends AccumuloServerContext implements LiveTServerSet.List
 
     // Always allow user data tablets to enter suspended state.
     watchers.add(new TabletGroupWatcher(this, new MetaDataStateStore(this, this), null, SuspensionPolicy.SUSPEND));
-    
-    // Allow metadata tablets to enter suspended state only if so configured.  Generally we'll want metadata tablets to
+
+    // Allow metadata tablets to enter suspended state only if so configured. Generally we'll want metadata tablets to
     // be immediately reassigned, even if there's a global table.suspension.duration setting.
-    watchers.add(new TabletGroupWatcher(this, new RootTabletStateStore(this, this), watchers.get(0), 
-            getConfiguration().getBoolean(Property.MASTER_METADATA_SUSPENDABLE)?SuspensionPolicy.SUSPEND:SuspensionPolicy.UNASSIGN));
-    
-    // Never allow root tablet to enter suspended state.  
+    watchers.add(new TabletGroupWatcher(this, new RootTabletStateStore(this, this), watchers.get(0), getConfiguration().getBoolean(
+        Property.MASTER_METADATA_SUSPENDABLE) ? SuspensionPolicy.SUSPEND : SuspensionPolicy.UNASSIGN));
+
+    // Never allow root tablet to enter suspended state.
     watchers.add(new TabletGroupWatcher(this, new ZooTabletStateStore(new ZooStore(zroot)), watchers.get(1), SuspensionPolicy.UNASSIGN));
     for (TabletGroupWatcher watcher : watchers) {
       watcher.start();
