@@ -17,7 +17,6 @@
 package org.apache.accumulo.master;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
-import static java.lang.Math.min;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -97,21 +96,32 @@ import org.apache.accumulo.server.conf.TableConfiguration;
 import static java.lang.Math.min;
 
 class TabletGroupWatcher extends Daemon {
+  public static enum SuspensionPolicy {
+    UNASSIGN,
+    SUSPEND
+  }
   // Constants used to make sure assignment logging isn't excessive in quantity or size
   private static final String ASSIGNMENT_BUFFER_SEPARATOR = ", ";
   private static final int ASSINGMENT_BUFFER_MAX_LENGTH = 4096;
 
-  private final Master master;
+  private final Master master;  
   final TabletStateStore store;
   final TabletGroupWatcher dependentWatcher;
+  /** 
+   * When false, move tablets in state {@code TabletState.ASSIGNED_TO_DEAD_SERVER} to state {@code TabletState.UNASSIGNED}.
+   * When true, move such tablets to state {@code TabletState.SUSPENDED}.
+   */
+  private final SuspensionPolicy suspensionPolicy;
+  
   private MasterState masterState;
 
   final TableStats stats = new TableStats();
 
-  TabletGroupWatcher(Master master, TabletStateStore store, TabletGroupWatcher dependentWatcher) {
+  TabletGroupWatcher(Master master, TabletStateStore store, TabletGroupWatcher dependentWatcher, SuspensionPolicy suspensionPolicy) {
     this.master = master;
     this.store = store;
     this.dependentWatcher = dependentWatcher;
+    this.suspensionPolicy=suspensionPolicy;
   }
 
   Map<String,TableCounts> getStats() {
@@ -784,7 +794,14 @@ class TabletGroupWatcher extends Daemon {
       int maxServersToShow = min(assignedToDeadServers.size(), 100);
       Master.log.debug(assignedToDeadServers.size() + " assigned to dead servers: " + assignedToDeadServers.subList(0, maxServersToShow) + "...");
       Master.log.debug("logs for dead servers: " + logsForDeadServers);
-      store.suspend(assignedToDeadServers, logsForDeadServers, master.getSteadyTime());
+      switch (suspensionPolicy) {
+        case SUSPEND:
+          store.suspend(assignedToDeadServers, logsForDeadServers, master.getSteadyTime());
+          break;
+        case UNASSIGN:
+          store.unassign(assignedToDeadServers, logsForDeadServers);
+          break;
+      }
       this.master.markDeadServerLogsAsClosed(logsForDeadServers);
       this.master.nextEvent.event("Marked %d tablets as suspended because they don't have current servers", assignedToDeadServers.size());
     }

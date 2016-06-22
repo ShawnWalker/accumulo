@@ -99,7 +99,7 @@ public class MergeStats {
     this.total++;
     if (state.equals(TabletState.HOSTED))
       this.hosted++;
-    if (state.equals(TabletState.UNASSIGNED))
+    if (state.equals(TabletState.UNASSIGNED) || state.equals(TabletState.SUSPENDED))
       this.unassigned++;
   }
 
