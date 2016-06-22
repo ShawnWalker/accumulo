@@ -67,6 +67,11 @@ public class MasterTime extends TimerTask {
     return MILLISECONDS.convert(System.nanoTime() + skewAmount, NANOSECONDS);
   }
 
+  /** Shut down the time keeping. */
+  public void shutdown() {
+    timer.cancel();
+  }
+
   @Override
   public void run() {
     switch (master.getMasterState()) {

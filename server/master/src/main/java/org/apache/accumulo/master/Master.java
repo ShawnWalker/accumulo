@@ -1252,6 +1252,9 @@ public class Master extends AccumuloServerContext implements LiveTServerSet.List
     log.info("Shutting down fate.");
     fate.shutdown();
 
+    log.info("Shutting down timekeeping.");
+    timeKeeper.shutdown();
+
     final long deadline = System.currentTimeMillis() + MAX_CLEANUP_WAIT_TIME;
     statusThread.join(remaining(deadline));
     replicationWorkAssigner.join(remaining(deadline));
