@@ -47,8 +47,12 @@ import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.junit.Assert;
 import org.junit.Test;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class SuspendedTabletsIT extends ConfigurableMacBase {
+  private static final Logger log = LoggerFactory.getLogger(SuspendedTabletsIT.class);
+
   public static final int TSERVERS = 5;
   public static final long SUSPEND_DURATION = MILLISECONDS.convert(2, MINUTES);
   public static final int SPLITS = 100;
@@ -92,7 +96,9 @@ public class SuspendedTabletsIT extends ConfigurableMacBase {
           }
         }
         return result;
-      } catch (Exception ex) {}
+      } catch (Exception ex) {
+        log.error("Failed to scan metadata table, retrying", ex);
+      }
     }
   }
 
