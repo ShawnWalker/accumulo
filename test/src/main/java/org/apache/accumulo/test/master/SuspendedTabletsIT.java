@@ -41,7 +41,6 @@ import org.apache.accumulo.minicluster.impl.MiniAccumuloConfigImpl;
 import org.apache.accumulo.minicluster.impl.ProcessReference;
 import org.apache.accumulo.server.master.state.MetaDataTableScanner;
 import org.apache.accumulo.server.master.state.TabletLocationState;
-import org.apache.accumulo.server.master.state.TabletLocationState.BadLocationStateException;
 import org.apache.accumulo.test.functional.ConfigurableMacBase;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
@@ -121,16 +120,19 @@ public class SuspendedTabletsIT extends ConfigurableMacBase {
     }
     conn.tableOperations().addSplits(tableName, splitPoints);
 
-    // Wait for all of the tablets for our table to be hosted
+    // Wait for all of the tablets to hosted ...
     DistributionState ds;
-    for (ds = getDistribution(ctx, tableName); ds.hostedCount != SPLITS || ds.haveTablets.size() <= 1; ds = getDistribution(ctx, tableName)) {
+    for (ds = getDistribution(ctx, tableName); ds.hostedCount != SPLITS; ds = getDistribution(ctx, tableName)) {
       Thread.sleep(1000);
     }
 
-    // Pray all of our tablet servers get at least 1 tablet.
+    // ... and balanced.
+    conn.instanceOperations().waitForBalance();
+
+    // Kill enough tablet servers to guarantee that one of our table's tablets will be on a dead server.
+    ds = getDistribution(ctx, tableName);
     int hostsCount = ds.haveTablets.size();
 
-    // Kill enough tablet servers to guarantee that one of our table's tablets will be on the dead server.
     long killTime = System.nanoTime();
     Iterator<ProcessReference> prIt = getCluster().getProcesses().get(ServerType.TABLET_SERVER).iterator();
     for (int i = hostsCount; i <= TSERVERS; ++i) {
