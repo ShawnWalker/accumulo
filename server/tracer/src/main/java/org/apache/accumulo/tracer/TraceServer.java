@@ -79,7 +79,16 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import static com.google.common.util.concurrent.Uninterruptibles.sleepUninterruptibly;
+import com.google.inject.AbstractModule;
+import com.google.inject.Injector;
+import com.google.inject.Stage;
+import com.google.inject.name.Names;
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Singleton;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 
+@Singleton
 public class TraceServer implements Watcher {
 
   final private static Logger log = LoggerFactory.getLogger(TraceServer.class);
@@ -178,7 +187,8 @@ public class TraceServer implements Watcher {
 
   }
 
-  public TraceServer(ServerConfigurationFactory serverConfiguration, String hostname) throws Exception {
+  @Inject
+  private TraceServer(ServerConfigurationFactory serverConfiguration, @Named("hostname") String hostname) throws Exception {
     this.serverConfiguration = serverConfiguration;
     log.info("Version " + Constants.VERSION);
     log.info("Instance " + serverConfiguration.getInstance().getInstanceID());
@@ -353,11 +363,19 @@ public class TraceServer implements Watcher {
     opts.parseArgs(app, args);
     Accumulo.setupLogging(app);
     Instance instance = HdfsZooInstance.getInstance();
-    ServerConfigurationFactory conf = new ServerConfigurationFactory(instance);
+    final ServerConfigurationFactory conf = new ServerConfigurationFactory(instance);
     VolumeManager fs = VolumeManagerImpl.get();
     Accumulo.init(fs, conf, app);
-    String hostname = opts.getAddress();
-    TraceServer server = new TraceServer(conf, hostname);
+    final String hostname = opts.getAddress();
+    
+    Injector injector=InjectorBuilder.newRoot().add(TraceServerModule.class).add(new AbstractModule() {
+      @Override
+      protected void configure() {
+        bind(ServerConfigurationFactory.class).toInstance(conf);
+        bind(String.class).annotatedWith(Names.named("hostname")).toInstance(hostname);
+      }      
+    }).build(Stage.PRODUCTION);
+    TraceServer server = injector.getInstance(TraceServer.class);
     try {
       server.run();
     } finally {

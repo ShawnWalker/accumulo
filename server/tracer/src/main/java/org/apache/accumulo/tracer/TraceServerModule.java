@@ -14,15 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.accumulo.server;
+package org.apache.accumulo.tracer;
 
 import com.google.inject.AbstractModule;
-import org.apache.accumulo.core.client.impl.AccumuloClientModule;
 import org.apache.accumulo.core.inject.Requires;
+import org.apache.accumulo.server.AccumuloServerModule;
 
-/** Dependencies for Accumulo servers. */
-@Requires(AccumuloClientModule.class)
-public class AccumuloServerModule extends AbstractModule {
+@Requires(AccumuloServerModule.class)
+public class TraceServerModule extends AbstractModule {
   @Override
-  protected void configure() {}
+  protected void configure() {
+    bind(TraceServer.class);
+  }
 }

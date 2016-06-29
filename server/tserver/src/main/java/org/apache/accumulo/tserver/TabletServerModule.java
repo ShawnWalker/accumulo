@@ -14,16 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.accumulo.master;
+package org.apache.accumulo.tserver;
 
 import com.google.inject.AbstractModule;
 import org.apache.accumulo.core.inject.Requires;
 import org.apache.accumulo.server.AccumuloServerModule;
 
 @Requires(AccumuloServerModule.class)
-public class MasterModule extends AbstractModule {
+public class TabletServerModule extends AbstractModule {
   @Override
   protected void configure() {
-    bind(Master.class);
+    bind(TabletServer.class);
   }
 }

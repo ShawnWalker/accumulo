@@ -162,12 +162,21 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Iterables;
+import com.google.inject.AbstractModule;
+import com.google.inject.Injector;
+import com.google.inject.Stage;
+import com.google.inject.name.Names;
+import javax.inject.Inject;
+import javax.inject.Named;
+import javax.inject.Singleton;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 
 /**
  * The Master is responsible for assigning and balancing tablets to tablet servers.
  *
  * The master will also coordinate log recoveries and reports general status.
  */
+@Singleton
 public class Master extends AccumuloServerContext implements LiveTServerSet.Listener, TableObserver, CurrentState {
 
   final static Logger log = LoggerFactory.getLogger(Master.class);
@@ -581,7 +590,8 @@ public class Master extends AccumuloServerContext implements LiveTServerSet.List
       throw new ThriftTableOperationException(tableId, null, TableOperation.MERGE, TableOperationExceptionType.OFFLINE, "table is not online");
   }
 
-  public Master(ServerConfigurationFactory config, VolumeManager fs, String hostname) throws IOException {
+  @Inject
+  private Master(ServerConfigurationFactory config, VolumeManager fs, @Named("hostname") String hostname) throws IOException {
     super(config);
     this.serverConfig = config;
     this.fs = fs;
@@ -1367,17 +1377,26 @@ public class Master extends AccumuloServerContext implements LiveTServerSet.List
 
   public static void main(String[] args) throws Exception {
     try {
-      SecurityUtil.serverLogin(SiteConfiguration.getInstance());
-
       ServerOpts opts = new ServerOpts();
       final String app = "master";
       opts.parseArgs(app, args);
-      String hostname = opts.getAddress();
+      final String hostname = opts.getAddress();
+
+      SecurityUtil.serverLogin(SiteConfiguration.getInstance());
       Accumulo.setupLogging(app);
-      ServerConfigurationFactory conf = new ServerConfigurationFactory(HdfsZooInstance.getInstance());
-      VolumeManager fs = VolumeManagerImpl.get();
+      final ServerConfigurationFactory conf = new ServerConfigurationFactory(HdfsZooInstance.getInstance());
+      final VolumeManager fs = VolumeManagerImpl.get();
       Accumulo.init(fs, conf, app);
-      Master master = new Master(conf, fs, hostname);
+
+      Injector injector = InjectorBuilder.newRoot().add(MasterServerModule.class).add(new AbstractModule() {
+        @Override
+        protected void configure() {
+          bind(ServerConfigurationFactory.class).toInstance(conf);
+          bind(VolumeManager.class).toInstance(fs);
+          bind(String.class).annotatedWith(Names.named("hostname")).toInstance(hostname);
+        }
+      }).build(Stage.PRODUCTION);
+      Master master = injector.getInstance(Master.class);
       DistributedTrace.enable(hostname, app, conf.getConfiguration());
       master.run();
     } catch (Exception ex) {

@@ -258,7 +258,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.net.HostAndPort;
+import com.google.inject.AbstractModule;
+import com.google.inject.Injector;
+import com.google.inject.Stage;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 
+@Singleton
 public class TabletServer extends AccumuloServerContext implements Runnable {
 
   private static final Logger log = LoggerFactory.getLogger(TabletServer.class);
@@ -329,7 +336,8 @@ public class TabletServer extends AccumuloServerContext implements Runnable {
   private final ZooAuthenticationKeyWatcher authKeyWatcher;
   private final WalStateManager walMarker;
 
-  public TabletServer(ServerConfigurationFactory confFactory, VolumeManager fs) {
+  @Inject
+  private TabletServer(ServerConfigurationFactory confFactory, VolumeManager fs) {
     super(confFactory);
     this.confFactory = confFactory;
     this.fs = fs;
@@ -2898,16 +2906,26 @@ public class TabletServer extends AccumuloServerContext implements Runnable {
 
   public static void main(String[] args) throws IOException {
     try {
-      SecurityUtil.serverLogin(SiteConfiguration.getInstance());
       ServerOpts opts = new ServerOpts();
       final String app = "tserver";
       opts.parseArgs(app, args);
-      String hostname = opts.getAddress();
+      final String hostname = opts.getAddress();
+
+      SecurityUtil.serverLogin(SiteConfiguration.getInstance());
       Accumulo.setupLogging(app);
-      ServerConfigurationFactory conf = new ServerConfigurationFactory(HdfsZooInstance.getInstance());
-      VolumeManager fs = VolumeManagerImpl.get();
+      final ServerConfigurationFactory conf = new ServerConfigurationFactory(HdfsZooInstance.getInstance());
+      final VolumeManager fs = VolumeManagerImpl.get();
       Accumulo.init(fs, conf, app);
-      final TabletServer server = new TabletServer(conf, fs);
+
+      Injector injector = InjectorBuilder.newRoot().add(TabletServerModule.class).add(new AbstractModule() {
+        @Override
+        protected void configure() {
+          bind(ServerConfigurationFactory.class).toInstance(conf);
+          bind(VolumeManager.class).toInstance(fs);
+        }
+      }).build(Stage.PRODUCTION);
+      final TabletServer server = injector.getInstance(TabletServer.class);
+
       server.config(hostname);
       DistributedTrace.enable(hostname, app, conf.getConfiguration());
       if (UserGroupInformation.isSecurityEnabled()) {

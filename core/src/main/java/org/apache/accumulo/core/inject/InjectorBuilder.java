@@ -108,7 +108,7 @@ public class InjectorBuilder {
 
   /** Create an {@link Injector} with the given modules. */
   public Injector build() {
-    return build(Stage.DEVELOPMENT);
+    return build(Stage.PRODUCTION);
   }
 
   /** Create an {@link Injector} with the given modules. */

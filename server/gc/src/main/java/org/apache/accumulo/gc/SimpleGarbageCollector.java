@@ -111,8 +111,15 @@ import com.beust.jcommander.Parameter;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
+import com.google.inject.AbstractModule;
+import com.google.inject.Injector;
+import com.google.inject.Stage;
 import com.google.protobuf.InvalidProtocolBufferException;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 
+@Singleton
 public class SimpleGarbageCollector extends AccumuloServerContext implements Iface {
   private static final Text EMPTY_TEXT = new Text();
 
@@ -144,14 +151,24 @@ public class SimpleGarbageCollector extends AccumuloServerContext implements Ifa
     final String app = "gc";
     Accumulo.setupLogging(app);
     Instance instance = HdfsZooInstance.getInstance();
-    ServerConfigurationFactory conf = new ServerConfigurationFactory(instance);
+    final ServerConfigurationFactory conf = new ServerConfigurationFactory(instance);
     log.info("Version " + Constants.VERSION);
     log.info("Instance " + instance.getInstanceID());
     final VolumeManager fs = VolumeManagerImpl.get();
     Accumulo.init(fs, conf, app);
-    Opts opts = new Opts();
+    final Opts opts = new Opts();
     opts.parseArgs(app, args);
-    SimpleGarbageCollector gc = new SimpleGarbageCollector(opts, fs, conf);
+
+    Injector injector = InjectorBuilder.newRoot().add(GarbageCollectorModule.class).add(new AbstractModule() {
+      @Override
+      protected void configure() {
+        bind(ServerConfigurationFactory.class).toInstance(conf);
+        bind(VolumeManager.class).toInstance(fs);
+        bind(Opts.class).toInstance(opts);
+      }
+    }).build(Stage.PRODUCTION);
+
+    SimpleGarbageCollector gc = injector.getInstance(SimpleGarbageCollector.class);
 
     DistributedTrace.enable(opts.getAddress(), app, conf.getConfiguration());
     try {
@@ -167,7 +184,8 @@ public class SimpleGarbageCollector extends AccumuloServerContext implements Ifa
    * @param opts
    *          options
    */
-  public SimpleGarbageCollector(Opts opts, VolumeManager fs, ServerConfigurationFactory confFactory) {
+  @Inject
+  SimpleGarbageCollector(Opts opts, VolumeManager fs, ServerConfigurationFactory confFactory) {
     super(confFactory);
     this.opts = opts;
     this.fs = fs;
