@@ -132,6 +132,7 @@
     <findbugs.version>3.0.3</findbugs.version>
     <!-- surefire/failsafe plugin option -->
     <forkCount>1</forkCount>
+    <guice.version>4.1.0</guice.version>
     <hadoop.version>2.6.4</hadoop.version>
     <htrace.version>3.1.0-incubating</htrace.version>
     <httpclient.version>3.1</httpclient.version>
@@ -178,6 +179,21 @@
         <artifactId>guava</artifactId>
         <!-- Hadoop-2.4.0 MiniDFSCluster uses classes from <Guava-15.0; fixed in 2.6.0 and later -->
         <version>14.0.1</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.inject</groupId>
+        <artifactId>guice</artifactId>
+        <version>${guice.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.inject.extensions</groupId>
+        <artifactId>guice-assistedinject</artifactId>
+        <version>${guice.version}</version>
+      </dependency>
+      <dependency>
+        <groupId>com.google.inject.extensions</groupId>
+        <artifactId>guice-multibindings</artifactId>
+        <version>${guice.version}</version>
       </dependency>
       <dependency>
         <groupId>com.google.protobuf</groupId>
