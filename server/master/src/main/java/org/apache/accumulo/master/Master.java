@@ -162,6 +162,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Iterables;
+import org.apache.accumulo.server.bulkimport.BulkImportTable;
 
 /**
  * The Master is responsible for assigning and balancing tablets to tablet servers.
@@ -388,6 +389,11 @@ public class Master extends AccumuloServerContext implements LiveTServerSet.List
           if (!Namespaces.exists(getInstance(), id))
             TableManager.prepareNewNamespaceState(getInstance().getInstanceID(), id, ns, NodeExistsPolicy.SKIP);
         }
+
+        // create bulk_import table in zk
+        log.debug("Upgrade creating table " + BulkImportTable.NAME + " (ID: " + BulkImportTable.ID + ")");
+        TableManager.prepareNewTableState(getInstance().getInstanceID(), BulkImportTable.ID, Namespaces.ACCUMULO_NAMESPACE_ID, BulkImportTable.NAME,
+            TableState.OFFLINE, NodeExistsPolicy.SKIP);
 
         // create replication table in zk
         log.debug("Upgrade creating table " + ReplicationTable.NAME + " (ID: " + ReplicationTable.ID + ")");
