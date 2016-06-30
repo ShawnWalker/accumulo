@@ -116,6 +116,7 @@ import com.google.auto.service.AutoService;
 import com.google.common.base.Joiner;
 
 import jline.console.ConsoleReader;
+import org.apache.accumulo.server.bulkimport.BulkImportTable;
 
 /**
  * This class is used to setup the directory structure and the root tablet to get an instance started
@@ -158,6 +159,7 @@ public class Initialize implements KeywordExecutable {
   private static HashMap<String,String> initialMetadataConf = new HashMap<String,String>();
   private static HashMap<String,String> initialMetadataCombinerConf = new HashMap<String,String>();
   private static HashMap<String,String> initialReplicationTableConf = new HashMap<String,String>();
+  private static HashMap<String,String> initialBulkImportTableConf = new HashMap<String,String>();
 
   static {
     initialMetadataConf.put(Property.TABLE_FILE_COMPRESSED_BLOCK_SIZE.getKey(), "32K");
@@ -423,18 +425,21 @@ public class Initialize implements KeywordExecutable {
         + MetadataTable.ID + TABLE_TABLETS_TABLET_DIR;
     String replicationTableDefaultTabletDir = fs.choose(Optional.<String> empty(), ServerConstants.getBaseUris()) + Constants.HDFS_TABLES_DIR + Path.SEPARATOR
         + ReplicationTable.ID + Constants.DEFAULT_TABLET_LOCATION;
+    String bulkImportTableDefaultTabletDir = fs.choose(Optional.<String> empty(), ServerConstants.getBaseUris()) + Constants.HDFS_TABLES_DIR + Path.SEPARATOR
+        + BulkImportTable.ID + Constants.DEFAULT_TABLET_LOCATION;
     String defaultMetadataTabletDir = fs.choose(Optional.<String> empty(), ServerConstants.getBaseUris()) + Constants.HDFS_TABLES_DIR + Path.SEPARATOR
         + MetadataTable.ID + Constants.DEFAULT_TABLET_LOCATION;
 
     // create table and default tablets directories
-    createDirectories(fs, rootTabletDir, tableMetadataTabletDir, defaultMetadataTabletDir, replicationTableDefaultTabletDir);
+    createDirectories(fs, rootTabletDir, tableMetadataTabletDir, defaultMetadataTabletDir, replicationTableDefaultTabletDir, bulkImportTableDefaultTabletDir);
 
     String ext = FileOperations.getNewFileExtension(AccumuloConfiguration.getDefaultConfiguration());
 
-    // populate the metadata tables tablet with info about the replication table's one initial tablet
+    // populate the metadata tables tablet with info about the replication table's and bulk import table's one initial tablet
     String metadataFileName = tableMetadataTabletDir + Path.SEPARATOR + "0_1." + ext;
     Tablet replicationTablet = new Tablet(ReplicationTable.ID, replicationTableDefaultTabletDir, null, null);
-    createMetadataFile(fs, metadataFileName, replicationTablet);
+    Tablet bulkImportTablet = new Tablet(BulkImportTable.ID, bulkImportTableDefaultTabletDir, null, null);
+    createMetadataFile(fs, metadataFileName, replicationTablet, bulkImportTablet);
 
     // populate the root tablet with info about the metadata table's two initial tablets
     String rootTabletFileName = rootTabletDir + Path.SEPARATOR + "00000_00000." + ext;
@@ -533,6 +538,9 @@ public class Initialize implements KeywordExecutable {
     TableManager.prepareNewTableState(uuid, MetadataTable.ID, Namespaces.ACCUMULO_NAMESPACE_ID, MetadataTable.NAME, TableState.ONLINE, NodeExistsPolicy.FAIL);
     TableManager.prepareNewTableState(uuid, ReplicationTable.ID, Namespaces.ACCUMULO_NAMESPACE_ID, ReplicationTable.NAME, TableState.OFFLINE,
         NodeExistsPolicy.FAIL);
+    TableManager.prepareNewTableState(uuid, BulkImportTable.ID, Namespaces.ACCUMULO_NAMESPACE_ID, BulkImportTable.NAME, TableState.ONLINE,
+        NodeExistsPolicy.FAIL);
+
     zoo.putPersistentData(zkInstanceRoot + Constants.ZTSERVERS, EMPTY_BYTE_ARRAY, NodeExistsPolicy.FAIL);
     zoo.putPersistentData(zkInstanceRoot + Constants.ZPROBLEMS, EMPTY_BYTE_ARRAY, NodeExistsPolicy.FAIL);
     zoo.putPersistentData(zkInstanceRoot + RootTable.ZROOT_TABLET, EMPTY_BYTE_ARRAY, NodeExistsPolicy.FAIL);
@@ -663,6 +671,12 @@ public class Initialize implements KeywordExecutable {
       // add configuration to the replication table
       for (Entry<String,String> entry : initialReplicationTableConf.entrySet()) {
         if (!TablePropUtil.setTableProperty(ReplicationTable.ID, entry.getKey(), entry.getValue()))
+          throw new IOException("Cannot create per-table property " + entry.getKey());
+      }
+
+      // add configuration to the bulk import table
+      for (Entry<String,String> entry : initialBulkImportTableConf.entrySet()) {
+        if (!TablePropUtil.setTableProperty(BulkImportTable.ID, entry.getKey(), entry.getValue()))
           throw new IOException("Cannot create per-table property " + entry.getKey());
       }
     } catch (Exception e) {

@@ -26,4 +26,5 @@ public class BulkImportTable {
   public static final String ID = "+bulk";
   public static final String NAME = Namespaces.ACCUMULO_NAMESPACE + ".bulk_imports";
 
+  
 }

@@ -393,7 +393,7 @@ public class Master extends AccumuloServerContext implements LiveTServerSet.List
         // create bulk_import table in zk
         log.debug("Upgrade creating table " + BulkImportTable.NAME + " (ID: " + BulkImportTable.ID + ")");
         TableManager.prepareNewTableState(getInstance().getInstanceID(), BulkImportTable.ID, Namespaces.ACCUMULO_NAMESPACE_ID, BulkImportTable.NAME,
-            TableState.OFFLINE, NodeExistsPolicy.SKIP);
+            TableState.ONLINE, NodeExistsPolicy.SKIP);
 
         // create replication table in zk
         log.debug("Upgrade creating table " + ReplicationTable.NAME + " (ID: " + ReplicationTable.ID + ")");
