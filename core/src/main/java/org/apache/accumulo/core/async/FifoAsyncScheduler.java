@@ -16,19 +16,19 @@
  */
 package org.apache.accumulo.core.async;
 
-/** An logic error with async methods. */
-public abstract class AsyncLogicError extends IllegalStateException {
-  public AsyncLogicError() {}
+import java.util.ArrayDeque;
+import java.util.Deque;
 
-  public AsyncLogicError(String message) {
-    super(message);
+public class FifoAsyncScheduler implements AsyncScheduler {
+  private final Deque<Quantum> queue = new ArrayDeque<Quantum>();
+
+  @Override
+  public Quantum poll() {
+    return queue.poll();
   }
 
-  public AsyncLogicError(Throwable cause) {
-    super(cause);
-  }
-
-  public AsyncLogicError(String message, Throwable cause) {
-    super(message, cause);
+  @Override
+  public void enqueue(Quantum task) {
+    queue.add(task);
   }
 }

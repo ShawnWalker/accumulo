@@ -17,6 +17,6 @@
 package org.apache.accumulo.core.async;
 
 /** As {@link java.util.function.BiFunction}{@code &lt;Input, Throwable, Output&gt;}, but permits checked exceptions. */
-public interface AsyncHandler<Input, Output> {
+public interface AsyncHandler<Input,Output> {
   public Output apply(Input input, Throwable error) throws Throwable;
 }

@@ -16,51 +16,59 @@
  */
 package org.apache.accumulo.core.async;
 
+import com.google.common.collect.ImmutableMap;
 import com.google.common.util.concurrent.SettableFuture;
-import java.util.ArrayDeque;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Future;
 import java.util.function.Supplier;
+import org.apache.accumulo.core.async.AsyncScheduler.Priority;
+import org.apache.accumulo.core.async.AsyncScheduler.Quantum;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-/** Single threaded scheduler for asynchronous jobs.  */
+/** Single threaded scheduler for asynchronous jobs. */
 public class AsyncEngine extends Thread {
-  private static Logger log=LoggerFactory.getLogger(AsyncEngine.class);
-  private static ThreadLocal<LocalEngine> CURRENT_ENGINE=new ThreadLocal<>();
+  protected static final Supplier<AsyncScheduler> DEFAULT_SCHEDULER=() -> new FifoAsyncScheduler();
+  private static final Logger log = LoggerFactory.getLogger(AsyncEngine.class);
+  private static final ThreadLocal<LocalEngine> CURRENT_ENGINE = new ThreadLocal<>();
   
-  private final Set<Supplier<Boolean>> pollers=new HashSet<>();
-  private final ArrayDeque<Runnable>[] queues=new ArrayDeque[DelayTolerance.values().length];
-  private final ConcurrentLinkedQueue<IncomingJob> incomingJobs=new ConcurrentLinkedQueue<>();
-  
-  private DelayTolerance currentTolerance;
+  private final Set<AsyncPollTask> pollers = new HashSet<>();
+  private final AsyncScheduler scheduler;
+  private final ConcurrentLinkedQueue<Quantum> incomingJobs = new ConcurrentLinkedQueue<>();
+  private AsyncScheduler.Priority activePriority;
 
   public AsyncEngine() {
-    this("AsyncEngine");
+    this(AsyncEngine.class.getSimpleName());
   }
-  
+
   public AsyncEngine(String name) {
-    super(name);
-    for (int i=0;i<queues.length;++i) {
-      queues[i]=new ArrayDeque();
-    }
+    this(name, DEFAULT_SCHEDULER.get());
   }
   
-  /** Submit work to the {@code AsyncEngine} in the form of a function which generates an {@link AsyncFuture}.  Upon
-   * completion, the result will be made available as a CompletableFuture.
+  public AsyncEngine(String name, AsyncScheduler scheduler) {
+    super(name);
+    this.scheduler = scheduler;
+  }
+
+  /**
+   * Submit work to the {@code AsyncEngine} in the form of a function which generates an {@link AsyncFuture}. Upon completion, the result will be made available
+   * as a CompletableFuture.
+   * 
    * @param <T>
    * @param job
-   * @return 
+   * @return
    */
-  public <T> Future<T> submit(DelayTolerance tolerance, Supplier<AsyncFuture<T>> jobSupplier) {
-    SettableFuture<T> future=SettableFuture.create();
-    submit(new IncomingJob(tolerance, () -> {
+  public <T> Future<T> submit(ImmutableMap<String,String> priorityOptions, Supplier<AsyncFuture<T>> jobSupplier) {
+    SettableFuture<T> future = SettableFuture.create();
+    submit(new AsyncScheduler.Quantum(scheduler.initialize(priorityOptions), () -> {
       try {
         jobSupplier.get().handle((value, problem) -> {
-          if (problem==null) {
+          if (problem == null) {
             future.set(value);
           } else {
             future.setException(problem);
@@ -73,90 +81,83 @@ public class AsyncEngine extends Thread {
     }));
     return future;
   }
+
+  /** Add work to the engine from a different thread. */
+  protected synchronized void submit(AsyncScheduler.Quantum work) {
+    incomingJobs.add(work);
+    notify();
+  }  
   
-  /** 
-   * Get the engine running on the current thread, or throw {@link IllegalStateException} if the current thread
-   * is not controlled by an AsyncEngine.
+  /**
+   * Get the engine running on the current thread, or throw {@link IllegalStateException} if the current thread is not controlled by an AsyncEngine.
    */
   public static LocalEngine getLocalEngine() throws AsyncEngineMissingException {
-    LocalEngine current=CURRENT_ENGINE.get();
-    if (current==null) {
+    LocalEngine current = CURRENT_ENGINE.get();
+    if (current == null) {
       throw new AsyncEngineMissingException();
     } else {
       return current;
     }
   }
   
+  /** Create an instance of the LocalEngine. */
+  protected LocalEngine constructLocalEngine() {
+    return new LocalEngine();
+  }
+  
   /** Operations which can be executed from within the thread of the AsyncEngine. */
-  public class LocalEngine {
+  public class LocalEngine {                
     /** Request that the engine periodically run the specified function, until it returns false */
-    public void poll(Supplier<Boolean> poller) {
+    public void addPollTask(AsyncPollTask poller) {
       pollers.add(poller);
     }
 
-    /** Request that the engine arrange for the specified task to be run. */
-    public void schedule(DelayTolerance priority, Runnable task) {
-      scheduleLocal(priority, task);
+    /** Get the priority of the task this engine is currently running. */
+    public Priority getCurrentPriority() {
+      return activePriority;
     }
 
-    /** Return the tolerance of the currently running job. */
-    public DelayTolerance getCurrentTolerance() {
-      return currentTolerance;
+    /** Request that the engine arrange for the specified task to be run. */
+    public void schedule(Quantum q) {
+      scheduler.enqueue(q);
     }
-    
+
     /** Submit a job to another engine. */
     public <T> AsyncFuture<T> submitTo(AsyncEngine otherEngine, Supplier<AsyncFuture<T>> jobSupplier) {
-      AsyncPromise<T> promise=new AsyncPromise<>();
-      DelayTolerance curTol=getCurrentTolerance();
-      otherEngine.submit(new IncomingJob(curTol, () -> {
+      AsyncPromise<T> promise = new AsyncPromise<>();
+      final Priority priority = getCurrentPriority();
+      otherEngine.submit(priority.options, () -> {
         try {
           jobSupplier.get().handle((value, problem) -> {
-            submit(new IncomingJob(DelayTolerance.INTOLERANT_PLUS, () -> {
+            submit(new Quantum(priority, () -> {
               promise.setResult(value, problem);
             }));
             return null;
           });
         } catch (Exception ex) {
-          submit(new IncomingJob(DelayTolerance.INTOLERANT_PLUS, () -> {
+          submit(new Quantum(priority, () -> {
             promise.setException(ex);
           }));
         }
-      }));
+        return null;
+      });
       return promise.getFuture();
     }
   }
 
-  private static class IncomingJob {
-    private final DelayTolerance tolerance;
-    private final Runnable runnable;
-    IncomingJob(DelayTolerance tolerance, Runnable runnable) {
-      this.tolerance=tolerance;
-      this.runnable=runnable;
-    }
-  }
-  
-  protected void scheduleLocal(DelayTolerance tolerance, Runnable job) {
-    queues[tolerance.ordinal()].addLast(job);    
-  }
-  
-  protected synchronized void submit(IncomingJob job) {
-    incomingJobs.add(job);
-    notify();
-  }
-  
   @Override
   public void run() {
-    CURRENT_ENGINE.set(new LocalEngine());
+    CURRENT_ENGINE.set(constructLocalEngine());
     while (true) {
       if (isInterrupted()) {
         interrupt();
         return;
       }
       // Run through all pollers.
-      Iterator<Supplier<Boolean>> pollIt=pollers.iterator();
+      Iterator<AsyncPollTask> pollIt = pollers.iterator();
       while (pollIt.hasNext()) {
         try {
-          if (!pollIt.next().get()) {
+          if (!pollIt.next().poll()) {
             pollIt.remove();
           }
         } catch (Exception ex) {
@@ -164,24 +165,25 @@ public class AsyncEngine extends Thread {
           pollIt.remove();
         }
       }
-      boolean hadWork=false;
+      boolean hadWork = false;
       // Drain the incoming job pool
-      for (IncomingJob incomingJob=incomingJobs.poll(); incomingJob!=null; incomingJob=incomingJobs.poll()) {
-        hadWork=true;
-        scheduleLocal(incomingJob.tolerance, incomingJob.runnable);
+      for (Quantum incomingJob = incomingJobs.poll(); incomingJob != null; incomingJob = incomingJobs.poll()) {
+        hadWork = true;
+        scheduler.enqueue(incomingJob);
       }
-      for (int queueNum=0;queueNum<queues.length;++queueNum) {
-        currentTolerance=DelayTolerance.values()[queueNum];
-        for (int i=0;i<1<<(queues.length-queueNum);++i) {
-          if (queues[queueNum].isEmpty()) {
-            break;
-          }
-          try {
-            queues[queueNum].pollFirst().run();
-          } catch (Throwable th) {
-            log.error("Exception caught while running async job", th);
-          }
-          hadWork=true;
+      for (int jobNum = 0; jobNum < 128; ++jobNum) {
+        AsyncScheduler.Quantum task = scheduler.poll();
+        if (task == null) {
+          break;
+        }
+        try {
+          activePriority = task.priority;
+          hadWork = true;
+          task.r.run();
+        } catch (Throwable th) {
+          log.error("Exception caught while running async job", th);
+        } finally {
+          activePriority = null;
         }
       }
       if (!hadWork) {

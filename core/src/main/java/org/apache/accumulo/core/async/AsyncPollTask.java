@@ -16,15 +16,13 @@
  */
 package org.apache.accumulo.core.async;
 
-import java.util.Collection;
-
-public enum DelayTolerance {
-  INTOLERANT_PLUS,
-  INTOLERANT,
-  TOLERANT_PLUS,
-  TOLERANT;
-  
-  public DelayTolerance ifLessTolerantThan(DelayTolerance other) {
-    return this.compareTo(other)<0?this:other;
-  }
+/** A task to be called periodically by the {@link AsyncEngine} */
+@FunctionalInterface
+public interface AsyncPollTask {
+  /**
+   * Do work.
+   * 
+   * @return true if this job should be run at the next poll point, false otherwise.
+   */
+  public boolean poll();
 }

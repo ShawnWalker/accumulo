@@ -17,8 +17,7 @@
 package org.apache.accumulo.core.async;
 
 public class AsyncEngineMissingException extends AsyncLogicError {
-  public AsyncEngineMissingException() {
-  }
+  public AsyncEngineMissingException() {}
 
   public AsyncEngineMissingException(String message) {
     super(message);

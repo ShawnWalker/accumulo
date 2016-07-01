@@ -18,8 +18,7 @@ package org.apache.accumulo.core.async;
 
 /** Indicates that a computation has been cancelled. */
 public class CancelledException extends Exception {
-  public CancelledException() {
-  }
+  public CancelledException() {}
 
   public CancelledException(String message) {
     super(message);

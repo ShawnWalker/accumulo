@@ -19,7 +19,7 @@ package org.apache.accumulo.core.async;
 public interface Cancellable {
   /** Request any computation supporting this async object be cancelled. */
   public void cancel(Throwable cause);
-  
+
   default public void cancel() {
     cancel(new CancelledException());
   }
