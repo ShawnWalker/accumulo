@@ -1,3 +1,10 @@
+package org.apache.accumulo.server.client;
+
+import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
+import com.google.inject.Singleton;
+import org.apache.accumulo.core.client.Instance;
+
 /*
  * Licensed to the Apache Software Foundation (ASF) under one or more
  * contributor license agreements.  See the NOTICE file distributed with
@@ -14,24 +21,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.accumulo.core.inject;
 
-import com.google.inject.AbstractModule;
-import com.google.inject.matcher.Matchers;
+public class ServerInstanceModule extends AbstractModule {
 
-/**
- * Basic functionality we wish all Injectors to have.
- */
-public class InjectModule extends AbstractModule {
   @Override
   protected void configure() {
-    binder().requireExplicitBindings();
-    binder().disableCircularProxies();
-
-    bind(LifecycleManager.class).to(LifecycleManagerImpl.class);
-    LifecycleManagerImpl managerImpl = new LifecycleManagerImpl();
-    bind(LifecycleManagerImpl.class).toInstance(managerImpl);
-
-    bindListener(Matchers.any(), managerImpl);
+  }
+  
+  @Provides
+  @Singleton
+  protected Instance getInstance() {
+    return HdfsZooInstance.getInstance();
   }
 }

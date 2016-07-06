@@ -88,7 +88,6 @@ import org.apache.accumulo.server.init.Initialize;
 import org.apache.accumulo.server.util.AccumuloStatus;
 import org.apache.accumulo.server.util.PortUtils;
 import org.apache.accumulo.server.util.time.SimpleTimer;
-import org.apache.accumulo.server.zookeeper.ZooReaderWriterFactory;
 import org.apache.accumulo.start.Main;
 import org.apache.accumulo.start.classloader.vfs.MiniDFSUtil;
 import org.apache.commons.configuration.AbstractConfiguration;
@@ -111,6 +110,8 @@ import org.slf4j.LoggerFactory;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.common.base.Joiner;
 import com.google.common.collect.Maps;
+import java.nio.charset.StandardCharsets;
+import org.apache.accumulo.fate.zookeeper.ZooReaderWriter;
 
 /**
  * This class provides the backing implementation for {@link MiniAccumuloCluster}, and may contain features for internal testing which have not yet been
@@ -515,8 +516,8 @@ public class MiniAccumuloClusterImpl implements AccumuloCluster {
       Path instanceIdPath = Accumulo.getAccumuloInstanceIdPath(fs);
 
       String instanceIdFromFile = ZooUtil.getInstanceIDFromHdfs(instanceIdPath, cc, hadoopConf);
-      IZooReaderWriter zrw = new ZooReaderWriterFactory().getZooReaderWriter(cc.get(Property.INSTANCE_ZK_HOST),
-          (int) cc.getTimeInMillis(Property.INSTANCE_ZK_TIMEOUT), cc.get(Property.INSTANCE_SECRET));
+      IZooReaderWriter zrw = new ZooReaderWriter(cc.get(Property.INSTANCE_ZK_HOST),
+          (int) cc.getTimeInMillis(Property.INSTANCE_ZK_TIMEOUT), "digest", ("accumulo:"+cc.get(Property.INSTANCE_SECRET)).getBytes(StandardCharsets.UTF_8));
 
       String rootPath = ZooUtil.getRoot(instanceIdFromFile);
 

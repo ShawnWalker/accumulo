@@ -100,10 +100,15 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.net.HostAndPort;
+import com.google.inject.Injector;
+import com.google.inject.Stage;
+import javax.inject.Singleton;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 
 /**
  * Serve master statistics with an embedded web server.
  */
+@Singleton
 public class Monitor {
   private static final Logger log = LoggerFactory.getLogger(Monitor.class);
 
@@ -435,7 +440,8 @@ public class Monitor {
     log.info("Version " + Constants.VERSION);
     log.info("Instance " + instance.getInstanceID());
     Accumulo.init(fs, config, app);
-    Monitor monitor = new Monitor();
+    Injector injector=InjectorBuilder.newRoot().add(MonitorModule.class).build(Stage.PRODUCTION);
+    Monitor monitor = injector.getInstance(Monitor.class);
     DistributedTrace.enable(hostname, app, config.getConfiguration());
     try {
       monitor.run(hostname);

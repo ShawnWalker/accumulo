@@ -367,13 +367,13 @@ public class TraceServer implements Watcher {
     VolumeManager fs = VolumeManagerImpl.get();
     Accumulo.init(fs, conf, app);
     final String hostname = opts.getAddress();
-    
-    Injector injector=InjectorBuilder.newRoot().add(TraceServerModule.class).add(new AbstractModule() {
+
+    Injector injector = InjectorBuilder.newRoot().add(TraceServerModule.class).add(new AbstractModule() {
       @Override
       protected void configure() {
         bind(ServerConfigurationFactory.class).toInstance(conf);
         bind(String.class).annotatedWith(Names.named("hostname")).toInstance(hostname);
-      }      
+      }
     }).build(Stage.PRODUCTION);
     TraceServer server = injector.getInstance(TraceServer.class);
     try {

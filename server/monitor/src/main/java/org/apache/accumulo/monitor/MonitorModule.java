@@ -14,15 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.accumulo.core.client.impl;
+package org.apache.accumulo.monitor;
 
 import com.google.inject.AbstractModule;
-import org.apache.accumulo.core.conf.ConfigurationModule;
 import org.apache.accumulo.core.inject.Requires;
+import org.apache.accumulo.server.AccumuloServerModule;
 
-/** Bindings for Accumulo clients. */
-@Requires(ConfigurationModule.class)
-public class AccumuloClientModule extends AbstractModule {
+@Requires(AccumuloServerModule.class)
+public class MonitorModule extends AbstractModule {
   @Override
-  protected void configure() {}
+  protected void configure() {
+    bind(Monitor.class);
+  }
 }

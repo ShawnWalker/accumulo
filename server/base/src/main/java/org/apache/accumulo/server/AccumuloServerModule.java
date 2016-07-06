@@ -19,9 +19,11 @@ package org.apache.accumulo.server;
 import com.google.inject.AbstractModule;
 import org.apache.accumulo.core.client.impl.AccumuloClientModule;
 import org.apache.accumulo.core.inject.Requires;
+import org.apache.accumulo.server.client.ServerInstanceModule;
+import org.apache.accumulo.server.zookeeper.ServerZookeeperModule;
 
 /** Dependencies for Accumulo servers. */
-@Requires(AccumuloClientModule.class)
+@Requires({AccumuloClientModule.class, ServerInstanceModule.class, ServerZookeeperModule.class})
 public class AccumuloServerModule extends AbstractModule {
   @Override
   protected void configure() {}

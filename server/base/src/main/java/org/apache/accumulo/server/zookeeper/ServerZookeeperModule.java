@@ -14,15 +14,23 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.accumulo.core.client.impl;
+package org.apache.accumulo.server.zookeeper;
 
 import com.google.inject.AbstractModule;
+import com.google.inject.Provides;
+import javax.inject.Singleton;
 import org.apache.accumulo.core.conf.ConfigurationModule;
 import org.apache.accumulo.core.inject.Requires;
 
-/** Bindings for Accumulo clients. */
 @Requires(ConfigurationModule.class)
-public class AccumuloClientModule extends AbstractModule {
+public class ServerZookeeperModule extends AbstractModule {
   @Override
-  protected void configure() {}
+  protected void configure() {    
+  }
+  
+  @Provides
+  @Singleton
+  public ZooReaderWriter getZooReaderWriter() {
+    return ZooReaderWriter.getInstance();
+  }
 }

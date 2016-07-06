@@ -14,15 +14,20 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.accumulo.core.client.impl;
+package org.apache.accumulo.core.inject;
 
-import com.google.inject.AbstractModule;
-import org.apache.accumulo.core.conf.ConfigurationModule;
-import org.apache.accumulo.core.inject.Requires;
+import com.google.inject.ScopeAnnotation;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-/** Bindings for Accumulo clients. */
-@Requires(ConfigurationModule.class)
-public class AccumuloClientModule extends AbstractModule {
-  @Override
-  protected void configure() {}
+/** 
+ * Annotation denoting a type that should have only a single instance.  Unlike Guice's usual {@code @Singleton} annotation,
+ * The instance of this type is created only as required.
+ */
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.TYPE, ElementType.METHOD})
+@ScopeAnnotation
+public @interface LazySingleton {
 }

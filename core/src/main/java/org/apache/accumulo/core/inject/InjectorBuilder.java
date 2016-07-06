@@ -16,10 +16,12 @@
  */
 package org.apache.accumulo.core.inject;
 
+import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
 import com.google.inject.Module;
 import com.google.inject.Stage;
+import com.google.inject.matcher.Matchers;
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -113,13 +115,16 @@ public class InjectorBuilder {
 
   /** Create an {@link Injector} with the given modules. */
   public Injector build(Stage stage) {
-    List<Module> instances = new ArrayList<>(new ReplacementTransitiveClosureSet(specifiedModules).stream().filter(m -> !removedModules.contains(m)).map(m -> {
-      try {
-        return m.newInstance();
-      } catch (InstantiationException | IllegalAccessException ex) {
-        throw new IllegalStateException("Failed to instantiate " + m.getSimpleName(), ex);
-      }
-    }).collect(toList()));
+    List<Module> instances = new ArrayList<>(new ReplacementTransitiveClosureSet(specifiedModules)
+            .stream()
+            .filter(m -> !removedModules.contains(m))
+            .map(m -> {
+                try {
+                  return m.newInstance();
+                } catch (InstantiationException | IllegalAccessException ex) {
+                  throw new IllegalStateException("Failed to instantiate " + m.getSimpleName(), ex);
+                }
+            }).collect(toList()));
     instances.addAll(additionalInstances);
 
     return Guice.createInjector(stage, instances);
@@ -145,6 +150,22 @@ public class InjectorBuilder {
     }
 
     return newModuleType;
+  }
+
+  /**
+   * Basic functionality we wish all Injectors to have.
+   */
+  protected static class InjectModule extends AbstractModule {
+    @Override
+    protected void configure() {
+      binder().requireExplicitBindings();
+      binder().disableCircularProxies();
+      binder().bindScope(LazySingleton.class, new LazySingletonScope());
+      bind(LifecycleManager.class).to(LifecycleManagerImpl.class);
+      LifecycleManagerImpl managerImpl = new LifecycleManagerImpl();
+      bind(LifecycleManagerImpl.class).toInstance(managerImpl);
+      bindListener(Matchers.any(), managerImpl);
+    }
   }
 
   /** Follow {@code @Requires} annotations, build the transitive closure of the needed modules. */
