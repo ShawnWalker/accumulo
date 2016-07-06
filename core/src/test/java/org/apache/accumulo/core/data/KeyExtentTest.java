@@ -16,13 +16,9 @@
  */
 package org.apache.accumulo.core.data;
 
-import static org.hamcrest.CoreMatchers.hasItem;
-import static org.hamcrest.CoreMatchers.hasItems;
-import static org.hamcrest.CoreMatchers.is;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
-import static org.junit.Assert.assertThat;
 import static org.junit.Assert.assertTrue;
 
 import java.io.ByteArrayInputStream;
@@ -30,9 +26,6 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
@@ -52,7 +45,7 @@ public class KeyExtentTest {
 
   @Before
   public void setup() {
-    set0 = new TreeSet<KeyExtent>();
+    set0 = new TreeSet<>();
   }
 
   @Test
@@ -90,7 +83,7 @@ public class KeyExtentTest {
     assertNull(KeyExtent.findContainingExtent(nke("t", "1", null), set0));
     assertNull(KeyExtent.findContainingExtent(nke("t", null, "0"), set0));
 
-    TreeSet<KeyExtent> set1 = new TreeSet<KeyExtent>();
+    TreeSet<KeyExtent> set1 = new TreeSet<>();
 
     set1.add(nke("t", null, null));
 
@@ -99,7 +92,7 @@ public class KeyExtentTest {
     assertEquals(nke("t", null, null), KeyExtent.findContainingExtent(nke("t", "1", null), set1));
     assertEquals(nke("t", null, null), KeyExtent.findContainingExtent(nke("t", null, "0"), set1));
 
-    TreeSet<KeyExtent> set2 = new TreeSet<KeyExtent>();
+    TreeSet<KeyExtent> set2 = new TreeSet<>();
 
     set2.add(nke("t", "g", null));
     set2.add(nke("t", null, "g"));
@@ -123,7 +116,7 @@ public class KeyExtentTest {
     assertEquals(nke("t", null, "g"), KeyExtent.findContainingExtent(nke("t", "z", "h"), set2));
     assertEquals(nke("t", null, "g"), KeyExtent.findContainingExtent(nke("t", null, "h"), set2));
 
-    TreeSet<KeyExtent> set3 = new TreeSet<KeyExtent>();
+    TreeSet<KeyExtent> set3 = new TreeSet<>();
 
     set3.add(nke("t", "g", null));
     set3.add(nke("t", "s", "g"));
@@ -149,7 +142,7 @@ public class KeyExtentTest {
     assertEquals(nke("t", "g", null), KeyExtent.findContainingExtent(nke("t", "f", null), set3));
     assertNull(KeyExtent.findContainingExtent(nke("t", "h", null), set3));
 
-    TreeSet<KeyExtent> set4 = new TreeSet<KeyExtent>();
+    TreeSet<KeyExtent> set4 = new TreeSet<>();
 
     set4.add(nke("t1", "d", null));
     set4.add(nke("t1", "q", "d"));
@@ -185,14 +178,14 @@ public class KeyExtentTest {
 
   @Test
   public void testOverlaps() {
-    SortedMap<KeyExtent,Object> set0 = new TreeMap<KeyExtent,Object>();
+    SortedMap<KeyExtent,Object> set0 = new TreeMap<>();
     set0.put(nke("a", null, null), null);
 
     // Nothing overlaps with the empty set
     assertFalse(overlaps(nke("t", null, null), null));
     assertFalse(overlaps(nke("t", null, null), set0));
 
-    SortedMap<KeyExtent,Object> set1 = new TreeMap<KeyExtent,Object>();
+    SortedMap<KeyExtent,Object> set1 = new TreeMap<>();
 
     // Everything overlaps with the infinite range
     set1.put(nke("t", null, null), null);
@@ -206,7 +199,7 @@ public class KeyExtentTest {
     assertTrue(overlaps(nke("t", null, "a"), set1));
 
     // simple overlaps
-    SortedMap<KeyExtent,Object> set2 = new TreeMap<KeyExtent,Object>();
+    SortedMap<KeyExtent,Object> set2 = new TreeMap<>();
     set2.put(nke("a", null, null), null);
     set2.put(nke("t", "m", "j"), null);
     set2.put(nke("z", null, null), null);
@@ -225,7 +218,7 @@ public class KeyExtentTest {
     assertFalse(overlaps(nke("t", null, "m"), set2));
 
     // infinite overlaps
-    SortedMap<KeyExtent,Object> set3 = new TreeMap<KeyExtent,Object>();
+    SortedMap<KeyExtent,Object> set3 = new TreeMap<>();
     set3.put(nke("t", "j", null), null);
     set3.put(nke("t", null, "m"), null);
     assertTrue(overlaps(nke("t", "k", "a"), set3));
@@ -237,7 +230,7 @@ public class KeyExtentTest {
     // falls between
     assertFalse(overlaps(nke("t", "l", "k"), set3));
 
-    SortedMap<KeyExtent,Object> set4 = new TreeMap<KeyExtent,Object>();
+    SortedMap<KeyExtent,Object> set4 = new TreeMap<>();
     set4.put(nke("t", null, null), null);
     assertTrue(overlaps(nke("t", "k", "a"), set4));
     assertTrue(overlaps(nke("t", "k", null), set4));
@@ -290,57 +283,6 @@ public class KeyExtentTest {
     out.readFields(new DataInputStream(bais));
 
     return out;
-  }
-
-  @SuppressWarnings("deprecation")
-  @Test
-  public void testKeyExtentsForSimpleRange() {
-    Collection<KeyExtent> results;
-
-    results = KeyExtent.getKeyExtentsForRange(null, null, null);
-    assertTrue("Non-empty set returned from no extents", results.isEmpty());
-
-    results = KeyExtent.getKeyExtentsForRange(null, null, Collections.<KeyExtent> emptySet());
-    assertTrue("Non-empty set returned from no extents", results.isEmpty());
-
-    KeyExtent t = nke("t", null, null);
-    results = KeyExtent.getKeyExtentsForRange(null, null, Collections.<KeyExtent> singleton(t));
-    assertEquals("Single tablet should always be returned", 1, results.size());
-    assertEquals(t, results.iterator().next());
-  }
-
-  @SuppressWarnings("deprecation")
-  @Test
-  public void testKeyExtentsForRange() {
-    KeyExtent b = nke("t", "b", null);
-    KeyExtent e = nke("t", "e", "b");
-    KeyExtent h = nke("t", "h", "e");
-    KeyExtent m = nke("t", "m", "h");
-    KeyExtent z = nke("t", null, "m");
-
-    set0.addAll(Arrays.asList(b, e, h, m, z));
-
-    Collection<KeyExtent> results;
-
-    results = KeyExtent.getKeyExtentsForRange(null, null, set0);
-    assertThat("infinite range should return full set", results.size(), is(5));
-    assertThat("infinite range should return full set", results, hasItems(b, e, h, m, z));
-
-    results = KeyExtent.getKeyExtentsForRange(new Text("a"), new Text("z"), set0);
-    assertThat("full overlap should return full set", results.size(), is(5));
-    assertThat("full overlap should return full set", results, hasItems(b, e, h, m, z));
-
-    results = KeyExtent.getKeyExtentsForRange(null, new Text("f"), set0);
-    assertThat("end row should return head set", results.size(), is(3));
-    assertThat("end row should return head set", results, hasItems(b, e, h));
-
-    results = KeyExtent.getKeyExtentsForRange(new Text("f"), null, set0);
-    assertThat("start row should return tail set", results.size(), is(3));
-    assertThat("start row should return tail set", results, hasItems(h, m, z));
-
-    results = KeyExtent.getKeyExtentsForRange(new Text("f"), new Text("g"), set0);
-    assertThat("slice should return correct subset", results.size(), is(1));
-    assertThat("slice should return correct subset", results, hasItem(h));
   }
 
   @Test

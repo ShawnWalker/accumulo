@@ -97,11 +97,8 @@ public class ClientConfiguration extends CompositeConfiguration {
     private PropertyType type;
     private String description;
 
-    private Property accumuloProperty = null;
-
     private ClientProperty(Property prop) {
       this(prop.getKey(), prop.getDefaultValue(), prop.getType(), prop.getDescription());
-      accumuloProperty = prop;
     }
 
     private ClientProperty(String key, String defaultValue, PropertyType type, String description) {
@@ -119,24 +116,12 @@ public class ClientConfiguration extends CompositeConfiguration {
       return defaultValue;
     }
 
-    /**
-     * @deprecated since 1.7.0 This method returns a type that is not part of the public API and not guaranteed to be stable.
-     */
-    @Deprecated
-    public PropertyType getType() {
+    private PropertyType getType() {
       return type;
     }
 
     public String getDescription() {
       return description;
-    }
-
-    /**
-     * @deprecated since 1.7.0 This method returns a type that is not part of the public API and not guaranteed to be stable.
-     */
-    @Deprecated
-    public Property getAccumuloProperty() {
-      return accumuloProperty;
     }
 
     public static ClientProperty getPropertyByKey(String key) {
@@ -145,7 +130,7 @@ public class ClientConfiguration extends CompositeConfiguration {
           return prop;
       return null;
     }
-  };
+  }
 
   public ClientConfiguration(String configFile) throws ConfigurationException {
     this(new PropertiesConfiguration(), configFile);
@@ -215,7 +200,7 @@ public class ClientConfiguration extends CompositeConfiguration {
 
   private static ClientConfiguration loadFromSearchPath(List<String> paths) {
     try {
-      List<Configuration> configs = new LinkedList<Configuration>();
+      List<Configuration> configs = new LinkedList<>();
       for (String path : paths) {
         File conf = new File(path);
         if (conf.isFile() && conf.canRead()) {
@@ -272,7 +257,7 @@ public class ClientConfiguration extends CompositeConfiguration {
       // ~/.accumulo/config
       // $ACCUMULO_CONF_DIR/client.conf -OR- $ACCUMULO_HOME/conf/client.conf (depending on whether $ACCUMULO_CONF_DIR is set)
       // /etc/accumulo/client.conf
-      clientConfPaths = new LinkedList<String>();
+      clientConfPaths = new LinkedList<>();
       clientConfPaths.add(System.getProperty("user.home") + File.separator + USER_ACCUMULO_DIR_NAME + File.separator + USER_CONF_FILENAME);
       if (System.getenv("ACCUMULO_CONF_DIR") != null) {
         clientConfPaths.add(System.getenv("ACCUMULO_CONF_DIR") + File.separator + GLOBAL_CONF_FILENAME);

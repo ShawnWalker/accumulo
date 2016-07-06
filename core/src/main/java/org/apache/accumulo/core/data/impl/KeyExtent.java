@@ -25,8 +25,6 @@ import java.io.DataOutputStream;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.Collection;
 import java.util.Collections;
 import java.util.Map.Entry;
 import java.util.Set;
@@ -295,77 +293,6 @@ public class KeyExtent implements WritableComparable<KeyExtent> {
     return getPrevRowUpdateMutation(this);
   }
 
-  /**
-   * Empty start or end rows tell the method there are no start or end rows, and to use all the keyextents that are before the end row if no start row etc.
-   *
-   * @deprecated this method not intended for public use and is likely to be removed in a future version.
-   * @return all the key extents that the rows cover
-   */
-  @Deprecated
-  public static Collection<KeyExtent> getKeyExtentsForRange(Text startRow, Text endRow, Set<KeyExtent> kes) {
-    if (kes == null)
-      return Collections.emptyList();
-    if (startRow == null)
-      startRow = new Text();
-    if (endRow == null)
-      endRow = new Text();
-    Collection<KeyExtent> keys = new ArrayList<KeyExtent>();
-    for (KeyExtent ckes : kes) {
-      if (ckes.getPrevEndRow() == null) {
-        if (ckes.getEndRow() == null) {
-          // only tablet
-          keys.add(ckes);
-        } else {
-          // first tablet
-          // if start row = '' then we want everything up to the endRow which will always include the first tablet
-          if (startRow.getLength() == 0) {
-            keys.add(ckes);
-          } else if (ckes.getEndRow().compareTo(startRow) >= 0) {
-            keys.add(ckes);
-          }
-        }
-      } else {
-        if (ckes.getEndRow() == null) {
-          // last tablet
-          // if endRow = '' and we're at the last tablet, add it
-          if (endRow.getLength() == 0) {
-            keys.add(ckes);
-          }
-          if (ckes.getPrevEndRow().compareTo(endRow) < 0) {
-            keys.add(ckes);
-          }
-        } else {
-          // tablet in the middle
-          if (startRow.getLength() == 0) {
-            // no start row
-
-            if (endRow.getLength() == 0) {
-              // no start & end row
-              keys.add(ckes);
-            } else {
-              // just no start row
-              if (ckes.getPrevEndRow().compareTo(endRow) < 0) {
-                keys.add(ckes);
-              }
-            }
-          } else if (endRow.getLength() == 0) {
-            // no end row
-            if (ckes.getEndRow().compareTo(startRow) >= 0) {
-              keys.add(ckes);
-            }
-          } else {
-            // no null prevend or endrows and no empty string start or end rows
-            if (ckes.getPrevEndRow().compareTo(endRow) < 0 && ckes.getEndRow().compareTo(startRow) >= 0) {
-              keys.add(ckes);
-            }
-          }
-
-        }
-      }
-    }
-    return keys;
-  }
-
   public static Text decodePrevEndRow(Value ibw) {
     Text per = null;
 
@@ -611,7 +538,7 @@ public class KeyExtent implements WritableComparable<KeyExtent> {
 
       if (ke.getPrevEndRow() == tabletKe.getPrevEndRow() || ke.getPrevEndRow() != null && tabletKe.getPrevEndRow() != null
           && tabletKe.getPrevEndRow().compareTo(ke.getPrevEndRow()) == 0) {
-        children = new TreeSet<KeyExtent>();
+        children = new TreeSet<>();
       }
 
       if (children != null) {
@@ -624,7 +551,7 @@ public class KeyExtent implements WritableComparable<KeyExtent> {
       }
     }
 
-    return new TreeSet<KeyExtent>();
+    return new TreeSet<>();
   }
 
   public static KeyExtent findContainingExtent(KeyExtent extent, SortedSet<KeyExtent> extents) {
@@ -690,7 +617,7 @@ public class KeyExtent implements WritableComparable<KeyExtent> {
       start = extents.tailSet(lookupKey);
     }
 
-    TreeSet<KeyExtent> result = new TreeSet<KeyExtent>();
+    TreeSet<KeyExtent> result = new TreeSet<>();
     for (KeyExtent ke : start) {
       if (startsAfter(nke, ke)) {
         break;
@@ -701,7 +628,7 @@ public class KeyExtent implements WritableComparable<KeyExtent> {
   }
 
   public boolean overlaps(KeyExtent other) {
-    SortedSet<KeyExtent> set = new TreeSet<KeyExtent>();
+    SortedSet<KeyExtent> set = new TreeSet<>();
     set.add(other);
     return !findOverlapping(this, set).isEmpty();
   }
@@ -722,7 +649,7 @@ public class KeyExtent implements WritableComparable<KeyExtent> {
       start = extents.tailMap(lookupKey);
     }
 
-    TreeSet<KeyExtent> result = new TreeSet<KeyExtent>();
+    TreeSet<KeyExtent> result = new TreeSet<>();
     for (Entry<KeyExtent,?> entry : start.entrySet()) {
       KeyExtent ke = entry.getKey();
       if (startsAfter(nke, ke)) {

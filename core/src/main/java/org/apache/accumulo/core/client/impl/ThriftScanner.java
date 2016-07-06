@@ -75,7 +75,7 @@ import com.google.common.net.HostAndPort;
 public class ThriftScanner {
   private static final Logger log = LoggerFactory.getLogger(ThriftScanner.class);
 
-  public static final Map<TabletType,Set<String>> serversWaitedForWrites = new EnumMap<TabletType,Set<String>>(TabletType.class);
+  public static final Map<TabletType,Set<String>> serversWaitedForWrites = new EnumMap<>(TabletType.class);
 
   static {
     for (TabletType ttype : TabletType.values()) {
@@ -171,7 +171,7 @@ public class ThriftScanner {
       this.authorizations = authorizations;
       this.classLoaderContext = classLoaderContext;
 
-      columns = new ArrayList<Column>(fetchedColumns.size());
+      columns = new ArrayList<>(fetchedColumns.size());
       for (Column column : fetchedColumns) {
         columns.add(column);
       }
@@ -213,7 +213,7 @@ public class ThriftScanner {
     return (long) (Math.max(millis * 2, 3000) * (.9 + Math.random() / 5));
   }
 
-  public static List<KeyValue> scan(ClientContext context, ScanState scanState, int timeOut) throws ScanTimedOutException, AccumuloException,
+  public static List<KeyValue> scan(ClientContext context, ScanState scanState, long timeOut) throws ScanTimedOutException, AccumuloException,
       AccumuloSecurityException, TableNotFoundException {
     TabletLocation loc = null;
     Instance instance = context.getInstance();
@@ -498,7 +498,7 @@ public class ThriftScanner {
       if (sr.results.size() > 0 && !scanState.finished)
         scanState.range = new Range(new Key(sr.results.get(sr.results.size() - 1).key), false, scanState.range.getEndKey(), scanState.range.isEndKeyInclusive());
 
-      List<KeyValue> results = new ArrayList<KeyValue>(sr.results.size());
+      List<KeyValue> results = new ArrayList<>(sr.results.size());
       for (TKeyValue tkv : sr.results)
         results.add(new KeyValue(new Key(tkv.key), tkv.value));
 

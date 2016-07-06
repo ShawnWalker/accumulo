@@ -45,7 +45,6 @@ import org.apache.accumulo.core.data.PartialKey;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.sample.impl.SamplerConfigurationImpl;
 import org.apache.accumulo.core.security.Authorizations;
-import org.apache.accumulo.core.util.DeprecationUtil;
 import org.apache.accumulo.core.util.Pair;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.io.Writable;
@@ -62,7 +61,7 @@ public class RangeInputSplit extends InputSplit implements Writable {
   private TokenSource tokenSource;
   private String tokenFile;
   private AuthenticationToken token;
-  private Boolean offline, mockInstance, isolatedScan, localIterators;
+  private Boolean offline, isolatedScan, localIterators;
   private Authorizations auths;
   private Set<Pair<Text,Text>> fetchedColumns;
   private List<IteratorSetting> iterators;
@@ -155,12 +154,8 @@ public class RangeInputSplit extends InputSplit implements Writable {
     }
 
     if (in.readBoolean()) {
-      mockInstance = in.readBoolean();
-    }
-
-    if (in.readBoolean()) {
       int numColumns = in.readInt();
-      List<String> columns = new ArrayList<String>(numColumns);
+      List<String> columns = new ArrayList<>(numColumns);
       for (int i = 0; i < numColumns; i++) {
         columns.add(in.readUTF());
       }
@@ -208,7 +203,7 @@ public class RangeInputSplit extends InputSplit implements Writable {
 
     if (in.readBoolean()) {
       int numIterators = in.readInt();
-      iterators = new ArrayList<IteratorSetting>(numIterators);
+      iterators = new ArrayList<>(numIterators);
       for (int i = 0; i < numIterators; i++) {
         iterators.add(new IteratorSetting(in));
       }
@@ -245,11 +240,6 @@ public class RangeInputSplit extends InputSplit implements Writable {
     out.writeBoolean(null != localIterators);
     if (null != localIterators) {
       out.writeBoolean(localIterators);
-    }
-
-    out.writeBoolean(null != mockInstance);
-    if (null != mockInstance) {
-      out.writeBoolean(mockInstance);
     }
 
     out.writeBoolean(null != fetchedColumns);
@@ -314,28 +304,8 @@ public class RangeInputSplit extends InputSplit implements Writable {
     }
   }
 
-  /**
-   * Use {@link #getTableName}
-   *
-   * @deprecated since 1.6.1, use getTableName() instead.
-   */
-  @Deprecated
-  public String getTable() {
-    return getTableName();
-  }
-
   public String getTableName() {
     return tableName;
-  }
-
-  /**
-   * Use {@link #setTableName}
-   *
-   * @deprecated since 1.6.1, use setTableName() instead.
-   */
-  @Deprecated
-  public void setTable(String table) {
-    setTableName(table);
   }
 
   public void setTableName(String table) {
@@ -350,22 +320,9 @@ public class RangeInputSplit extends InputSplit implements Writable {
     return tableId;
   }
 
-  /**
-   * @see #getInstance(ClientConfiguration)
-   * @deprecated since 1.7.0, use getInstance(ClientConfiguration) instead.
-   */
-  @Deprecated
-  public Instance getInstance() {
-    return getInstance(ClientConfiguration.loadDefault());
-  }
-
   public Instance getInstance(ClientConfiguration base) {
     if (null == instanceName) {
       return null;
-    }
-
-    if (isMockInstance()) {
-      return DeprecationUtil.makeMockInstance(getInstanceName());
     }
 
     if (null == zooKeepers) {
@@ -425,22 +382,6 @@ public class RangeInputSplit extends InputSplit implements Writable {
     this.locations = Arrays.copyOf(locations, locations.length);
   }
 
-  /**
-   * @deprecated since 1.8.0; use MiniAccumuloCluster or a standard mock framework
-   */
-  @Deprecated
-  public Boolean isMockInstance() {
-    return mockInstance;
-  }
-
-  /**
-   * @deprecated since 1.8.0; use MiniAccumuloCluster or a standard mock framework
-   */
-  @Deprecated
-  public void setMockInstance(Boolean mockInstance) {
-    this.mockInstance = mockInstance;
-  }
-
   public Boolean isIsolatedScan() {
     return isolatedScan;
   }
@@ -474,7 +415,7 @@ public class RangeInputSplit extends InputSplit implements Writable {
   }
 
   public void setFetchedColumns(Collection<Pair<Text,Text>> fetchedColumns) {
-    this.fetchedColumns = new HashSet<Pair<Text,Text>>();
+    this.fetchedColumns = new HashSet<>();
     for (Pair<Text,Text> columns : fetchedColumns) {
       this.fetchedColumns.add(columns);
     }
@@ -515,7 +456,6 @@ public class RangeInputSplit extends InputSplit implements Writable {
     sb.append(" authenticationTokenFile: ").append(tokenFile);
     sb.append(" Authorizations: ").append(auths);
     sb.append(" offlineScan: ").append(offline);
-    sb.append(" mockInstance: ").append(mockInstance);
     sb.append(" isolatedScan: ").append(isolatedScan);
     sb.append(" localIterators: ").append(localIterators);
     sb.append(" fetchColumns: ").append(fetchedColumns);

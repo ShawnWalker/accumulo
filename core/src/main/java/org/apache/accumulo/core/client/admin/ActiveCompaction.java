@@ -45,7 +45,7 @@ public abstract class ActiveCompaction {
      * compaction that merges all of a tablets files into one file
      */
     FULL
-  };
+  }
 
   public static enum CompactionReason {
     /**
@@ -68,20 +68,13 @@ public abstract class ActiveCompaction {
      * Compaction initiated to close a unload a tablet
      */
     CLOSE
-  };
+  }
 
   /**
    *
    * @return name of the table the compaction is running against
    */
   public abstract String getTable() throws TableNotFoundException;
-
-  /**
-   * @return tablet thats is compacting
-   * @deprecated since 1.7.0 use {@link #getTablet()}
-   */
-  @Deprecated
-  public abstract org.apache.accumulo.core.data.KeyExtent getExtent();
 
   /**
    * @return tablet thats is compacting

@@ -50,12 +50,10 @@ import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.client.impl.ClientContext;
 import org.apache.accumulo.core.client.impl.Credentials;
-import org.apache.accumulo.core.client.impl.DelegationTokenImpl;
 import org.apache.accumulo.core.client.impl.Tables;
 import org.apache.accumulo.core.client.impl.TabletLocator;
 import org.apache.accumulo.core.client.mapreduce.InputTableConfig;
 import org.apache.accumulo.core.client.sample.SamplerConfiguration;
-import org.apache.accumulo.core.client.security.tokens.AuthenticationToken;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.PartialKey;
 import org.apache.accumulo.core.data.Range;
@@ -68,7 +66,6 @@ import org.apache.accumulo.core.metadata.schema.MetadataSchema;
 import org.apache.accumulo.core.sample.impl.SamplerConfigurationImpl;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.core.security.TablePermission;
-import org.apache.accumulo.core.util.DeprecationUtil;
 import org.apache.accumulo.core.util.Pair;
 import org.apache.accumulo.core.util.TextUtil;
 import org.apache.hadoop.conf.Configuration;
@@ -209,7 +206,7 @@ public class InputConfigurator extends ConfiguratorBase {
   public static void setRanges(Class<?> implementingClass, Configuration conf, Collection<Range> ranges) {
     checkArgument(ranges != null, "ranges is null");
 
-    ArrayList<String> rangeStrings = new ArrayList<String>(ranges.size());
+    ArrayList<String> rangeStrings = new ArrayList<>(ranges.size());
     try {
       for (Range r : ranges) {
         ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -238,7 +235,7 @@ public class InputConfigurator extends ConfiguratorBase {
   public static List<Range> getRanges(Class<?> implementingClass, Configuration conf) throws IOException {
 
     Collection<String> encodedRanges = conf.getStringCollection(enumToConfKey(implementingClass, ScanOpts.RANGES));
-    List<Range> ranges = new ArrayList<Range>();
+    List<Range> ranges = new ArrayList<>();
     for (String rangeString : encodedRanges) {
       ByteArrayInputStream bais = new ByteArrayInputStream(Base64.getDecoder().decode(rangeString));
       Range range = new Range();
@@ -264,11 +261,11 @@ public class InputConfigurator extends ConfiguratorBase {
 
     // If no iterators are present, return an empty list
     if (iterators == null || iterators.isEmpty())
-      return new ArrayList<IteratorSetting>();
+      return new ArrayList<>();
 
     // Compose the set of iterators encoded in the job configuration
     StringTokenizer tokens = new StringTokenizer(iterators, StringUtils.COMMA_STR);
-    List<IteratorSetting> list = new ArrayList<IteratorSetting>();
+    List<IteratorSetting> list = new ArrayList<>();
     try {
       while (tokens.hasMoreTokens()) {
         String itstring = tokens.nextToken();
@@ -304,7 +301,7 @@ public class InputConfigurator extends ConfiguratorBase {
 
   public static String[] serializeColumns(Collection<Pair<Text,Text>> columnFamilyColumnQualifierPairs) {
     checkArgument(columnFamilyColumnQualifierPairs != null, "columnFamilyColumnQualifierPairs is null");
-    ArrayList<String> columnStrings = new ArrayList<String>(columnFamilyColumnQualifierPairs.size());
+    ArrayList<String> columnStrings = new ArrayList<>(columnFamilyColumnQualifierPairs.size());
     for (Pair<Text,Text> column : columnFamilyColumnQualifierPairs) {
 
       if (column.getFirst() == null)
@@ -333,7 +330,7 @@ public class InputConfigurator extends ConfiguratorBase {
   public static Set<Pair<Text,Text>> getFetchedColumns(Class<?> implementingClass, Configuration conf) {
     checkArgument(conf != null, "conf is null");
     String confValue = conf.get(enumToConfKey(implementingClass, ScanOpts.COLUMNS));
-    List<String> serialized = new ArrayList<String>();
+    List<String> serialized = new ArrayList<>();
     if (confValue != null) {
       // Split and include any trailing empty strings to allow empty column families
       for (String val : confValue.split(",", -1)) {
@@ -344,7 +341,7 @@ public class InputConfigurator extends ConfiguratorBase {
   }
 
   public static Set<Pair<Text,Text>> deserializeFetchedColumns(Collection<String> serialized) {
-    Set<Pair<Text,Text>> columns = new HashSet<Pair<Text,Text>>();
+    Set<Pair<Text,Text>> columns = new HashSet<>();
 
     if (null == serialized) {
       return columns;
@@ -354,7 +351,7 @@ public class InputConfigurator extends ConfiguratorBase {
       int idx = col.indexOf(":");
       Text cf = new Text(idx < 0 ? Base64.getDecoder().decode(col) : Base64.getDecoder().decode(col.substring(0, idx)));
       Text cq = idx < 0 ? null : new Text(Base64.getDecoder().decode(col.substring(idx + 1)));
-      columns.add(new Pair<Text,Text>(cf, cq));
+      columns.add(new Pair<>(cf, cq));
     }
     return columns;
   }
@@ -621,7 +618,7 @@ public class InputConfigurator extends ConfiguratorBase {
    * @since 1.6.0
    */
   public static Map<String,InputTableConfig> getInputTableConfigs(Class<?> implementingClass, Configuration conf) {
-    Map<String,InputTableConfig> configs = new HashMap<String,InputTableConfig>();
+    Map<String,InputTableConfig> configs = new HashMap<>();
     Map.Entry<String,InputTableConfig> defaultConfig = getDefaultInputTableConfig(implementingClass, conf);
     if (defaultConfig != null)
       configs.put(defaultConfig.getKey(), defaultConfig.getValue());
@@ -675,9 +672,6 @@ public class InputConfigurator extends ConfiguratorBase {
    * @since 1.6.0
    */
   public static TabletLocator getTabletLocator(Class<?> implementingClass, Configuration conf, String tableId) throws TableNotFoundException {
-    String instanceType = conf.get(enumToConfKey(implementingClass, InstanceOpts.TYPE));
-    if ("MockInstance".equals(instanceType))
-      return DeprecationUtil.makeMockLocator();
     Instance instance = getInstance(implementingClass, conf);
     ClientConfiguration clientConf = getClientConfiguration(implementingClass, conf);
     ClientContext context = new ClientContext(instance,
@@ -744,69 +738,6 @@ public class InputConfigurator extends ConfiguratorBase {
     }
   }
 
-  // InputFormat doesn't have the equivalent of OutputFormat's checkOutputSpecs(JobContext job)
-  /**
-   * Check whether a configuration is fully configured to be used with an Accumulo {@link org.apache.hadoop.mapreduce.InputFormat}.
-   *
-   * <p>
-   * The implementation (JobContext or JobConf which created the Configuration) needs to be used to extract the proper {@link AuthenticationToken} for
-   * {@link DelegationTokenImpl} support.
-   *
-   * @param implementingClass
-   *          the class whose name will be used as a prefix for the property configuration key
-   * @param conf
-   *          the Hadoop configuration object to configure
-   * @throws IOException
-   *           if the context is improperly configured
-   * @since 1.6.0
-   *
-   * @see #validateInstance(Class, Configuration)
-   * @see #validatePermissions(Class, Configuration, Connector)
-   */
-  @Deprecated
-  public static void validateOptions(Class<?> implementingClass, Configuration conf) throws IOException {
-
-    Map<String,InputTableConfig> inputTableConfigs = getInputTableConfigs(implementingClass, conf);
-    if (!isConnectorInfoSet(implementingClass, conf))
-      throw new IOException("Input info has not been set.");
-    String instanceKey = conf.get(enumToConfKey(implementingClass, InstanceOpts.TYPE));
-    if (!"MockInstance".equals(instanceKey) && !"ZooKeeperInstance".equals(instanceKey))
-      throw new IOException("Instance info has not been set.");
-    // validate that we can connect as configured
-    try {
-      String principal = getPrincipal(implementingClass, conf);
-      AuthenticationToken token = getAuthenticationToken(implementingClass, conf);
-      Connector c = getInstance(implementingClass, conf).getConnector(principal, token);
-      if (!c.securityOperations().authenticateUser(principal, token))
-        throw new IOException("Unable to authenticate user");
-
-      if (getInputTableConfigs(implementingClass, conf).size() == 0)
-        throw new IOException("No table set.");
-
-      for (Map.Entry<String,InputTableConfig> tableConfig : inputTableConfigs.entrySet()) {
-        if (!c.securityOperations().hasTablePermission(getPrincipal(implementingClass, conf), tableConfig.getKey(), TablePermission.READ))
-          throw new IOException("Unable to access table");
-      }
-      for (Map.Entry<String,InputTableConfig> tableConfigEntry : inputTableConfigs.entrySet()) {
-        InputTableConfig tableConfig = tableConfigEntry.getValue();
-        if (!tableConfig.shouldUseLocalIterators()) {
-          if (tableConfig.getIterators() != null) {
-            for (IteratorSetting iter : tableConfig.getIterators()) {
-              if (!c.tableOperations().testClassLoad(tableConfigEntry.getKey(), iter.getIteratorClass(), SortedKeyValueIterator.class.getName()))
-                throw new AccumuloException("Servers are unable to load " + iter.getIteratorClass() + " as a " + SortedKeyValueIterator.class.getName());
-            }
-          }
-        }
-      }
-    } catch (AccumuloException e) {
-      throw new IOException(e);
-    } catch (AccumuloSecurityException e) {
-      throw new IOException(e);
-    } catch (TableNotFoundException e) {
-      throw new IOException(e);
-    }
-  }
-
   /**
    * Returns the {@link org.apache.accumulo.core.client.mapreduce.InputTableConfig} for the configuration based on the properties set using the single-table
    * input methods.
@@ -851,7 +782,7 @@ public class InputConfigurator extends ConfiguratorBase {
 
   public static Map<String,Map<KeyExtent,List<Range>>> binOffline(String tableId, List<Range> ranges, Instance instance, Connector conn)
       throws AccumuloException, TableNotFoundException {
-    Map<String,Map<KeyExtent,List<Range>>> binnedRanges = new HashMap<String,Map<KeyExtent,List<Range>>>();
+    Map<String,Map<KeyExtent,List<Range>>> binnedRanges = new HashMap<>();
 
     if (Tables.getTableState(instance, tableId) != TableState.OFFLINE) {
       Tables.clearCache(instance);
@@ -916,13 +847,13 @@ public class InputConfigurator extends ConfiguratorBase {
 
         Map<KeyExtent,List<Range>> tabletRanges = binnedRanges.get(last);
         if (tabletRanges == null) {
-          tabletRanges = new HashMap<KeyExtent,List<Range>>();
+          tabletRanges = new HashMap<>();
           binnedRanges.put(last, tabletRanges);
         }
 
         List<Range> rangeList = tabletRanges.get(extent);
         if (rangeList == null) {
-          rangeList = new ArrayList<Range>();
+          rangeList = new ArrayList<>();
           tabletRanges.put(extent, rangeList);
         }
 

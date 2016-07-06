@@ -79,7 +79,7 @@ public class TracerTest {
   }
 
   static class TestReceiver implements SpanReceiver {
-    public Map<Long,List<SpanStruct>> traces = new HashMap<Long,List<SpanStruct>>();
+    public Map<Long,List<SpanStruct>> traces = new HashMap<>();
 
     public TestReceiver() {}
 
@@ -99,7 +99,6 @@ public class TracerTest {
     public void close() throws IOException {}
   }
 
-  @SuppressWarnings("deprecation")
   @Test
   public void testTrace() throws Exception {
     TestReceiver tracer = new TestReceiver();
@@ -115,7 +114,7 @@ public class TracerTest {
     assertFalse(Trace.isTracing());
 
     Span start = Trace.on("testing");
-    assertEquals(Trace.currentTrace().getSpan(), start.getScope().getSpan());
+    assertEquals(org.apache.htrace.Trace.currentSpan(), start.getScope().getSpan());
     assertTrue(Trace.isTracing());
 
     Span span = Trace.start("shortest trace ever");

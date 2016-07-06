@@ -53,7 +53,7 @@ import jline.console.ConsoleReader;
 public class SetIterCommand extends Command {
 
   private Option allScopeOpt, mincScopeOpt, majcScopeOpt, scanScopeOpt, nameOpt, priorityOpt;
-  private Option aggTypeOpt, ageoffTypeOpt, regexTypeOpt, versionTypeOpt, reqvisTypeOpt, classnameTypeOpt;
+  private Option ageoffTypeOpt, regexTypeOpt, versionTypeOpt, reqvisTypeOpt, classnameTypeOpt;
 
   @Override
   public int execute(final String fullCommand, final CommandLine cl, final Shell shellState) throws AccumuloException, AccumuloSecurityException,
@@ -64,14 +64,9 @@ public class SetIterCommand extends Command {
 
     final int priority = Integer.parseInt(cl.getOptionValue(priorityOpt.getOpt()));
 
-    final Map<String,String> options = new HashMap<String,String>();
+    final Map<String,String> options = new HashMap<>();
     String classname = cl.getOptionValue(classnameTypeOpt.getOpt());
-    if (cl.hasOption(aggTypeOpt.getOpt())) {
-      Shell.log.warn("aggregators are deprecated");
-      @SuppressWarnings("deprecation")
-      String deprecatedClassName = org.apache.accumulo.core.iterators.AggregatingIterator.class.getName();
-      classname = deprecatedClassName;
-    } else if (cl.hasOption(regexTypeOpt.getOpt())) {
+    if (cl.hasOption(regexTypeOpt.getOpt())) {
       classname = RegExFilter.class.getName();
     } else if (cl.hasOption(ageoffTypeOpt.getOpt())) {
       classname = AgeOffFilter.class.getName();
@@ -119,14 +114,6 @@ public class SetIterCommand extends Command {
 
     ScanCommand.ensureTserversCanLoadIterator(shellState, tableName, classname);
 
-    final String aggregatorClass = options.get("aggregatorClass");
-    @SuppressWarnings("deprecation")
-    String deprecatedAggregatorClassName = org.apache.accumulo.core.iterators.aggregation.Aggregator.class.getName();
-    if (aggregatorClass != null && !shellState.getConnector().tableOperations().testClassLoad(tableName, aggregatorClass, deprecatedAggregatorClassName)) {
-      throw new ShellCommandException(ErrorCode.INITIALIZATION_FAILURE, "Servers are unable to load " + aggregatorClass + " as type "
-          + deprecatedAggregatorClassName);
-    }
-
     for (Iterator<Entry<String,String>> i = options.entrySet().iterator(); i.hasNext();) {
       final Entry<String,String> entry = i.next();
       if (entry.getValue() == null || entry.getValue().isEmpty()) {
@@ -159,14 +146,6 @@ public class SetIterCommand extends Command {
     if (!shellState.getConnector().namespaceOperations().testClassLoad(namespace, classname, SortedKeyValueIterator.class.getName())) {
       throw new ShellCommandException(ErrorCode.INITIALIZATION_FAILURE, "Servers are unable to load " + classname + " as type "
           + SortedKeyValueIterator.class.getName());
-    }
-
-    final String aggregatorClass = options.get("aggregatorClass");
-    @SuppressWarnings("deprecation")
-    String deprecatedAggregatorClassName = org.apache.accumulo.core.iterators.aggregation.Aggregator.class.getName();
-    if (aggregatorClass != null && !shellState.getConnector().namespaceOperations().testClassLoad(namespace, aggregatorClass, deprecatedAggregatorClassName)) {
-      throw new ShellCommandException(ErrorCode.INITIALIZATION_FAILURE, "Servers are unable to load " + aggregatorClass + " as type "
-          + deprecatedAggregatorClassName);
     }
 
     for (Iterator<Entry<String,String>> i = options.entrySet().iterator(); i.hasNext();) {
@@ -240,7 +219,7 @@ public class SetIterCommand extends Command {
       if (className.contains(".")) {
         shortClassName = className.substring(className.lastIndexOf('.') + 1);
       }
-      final Map<String,String> localOptions = new HashMap<String,String>();
+      final Map<String,String> localOptions = new HashMap<>();
       do {
         // clean up the overall options that caused things to fail
         for (String key : localOptions.keySet()) {
@@ -311,7 +290,7 @@ public class SetIterCommand extends Command {
       reader.flush();
       reader.println("Optional, configure name-value options for iterator:");
       String prompt = Shell.repeat("-", 10) + "> set option (<name> <value>, hit enter to skip): ";
-      final HashMap<String,String> localOptions = new HashMap<String,String>();
+      final HashMap<String,String> localOptions = new HashMap<>();
 
       while (true) {
         reader.flush();
@@ -357,14 +336,12 @@ public class SetIterCommand extends Command {
     final OptionGroup typeGroup = new OptionGroup();
     classnameTypeOpt = new Option("class", "class-name", true, "a java class that implements SortedKeyValueIterator");
     classnameTypeOpt.setArgName("name");
-    aggTypeOpt = new Option("agg", "aggregator", false, "an aggregating type");
     regexTypeOpt = new Option("regex", "regular-expression", false, "a regex matching iterator");
     versionTypeOpt = new Option("vers", "version", false, "a versioning iterator");
     reqvisTypeOpt = new Option("reqvis", "require-visibility", false, "an iterator that omits entries with empty visibilities");
     ageoffTypeOpt = new Option("ageoff", "ageoff", false, "an aging off iterator");
 
     typeGroup.addOption(classnameTypeOpt);
-    typeGroup.addOption(aggTypeOpt);
     typeGroup.addOption(regexTypeOpt);
     typeGroup.addOption(versionTypeOpt);
     typeGroup.addOption(reqvisTypeOpt);

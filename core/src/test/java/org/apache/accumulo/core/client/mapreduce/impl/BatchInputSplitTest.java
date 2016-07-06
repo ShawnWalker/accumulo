@@ -33,7 +33,6 @@ import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.iterators.user.SummingCombiner;
 import org.apache.accumulo.core.iterators.user.WholeRowIterator;
 import org.apache.accumulo.core.security.Authorizations;
-import org.apache.accumulo.core.util.DeprecationUtil;
 import org.apache.accumulo.core.util.Pair;
 import org.apache.hadoop.io.Text;
 import org.apache.log4j.Level;
@@ -68,13 +67,13 @@ public class BatchInputSplitTest {
     Range[] ranges = new Range[] {new Range(new Key("a"), new Key("b"))};
     BatchInputSplit split = new BatchInputSplit("table", "1", Arrays.asList(ranges), new String[] {"localhost"});
 
-    Set<Pair<Text,Text>> fetchedColumns = new HashSet<Pair<Text,Text>>();
+    Set<Pair<Text,Text>> fetchedColumns = new HashSet<>();
 
-    fetchedColumns.add(new Pair<Text,Text>(new Text("colf1"), new Text("colq1")));
-    fetchedColumns.add(new Pair<Text,Text>(new Text("colf2"), new Text("colq2")));
+    fetchedColumns.add(new Pair<>(new Text("colf1"), new Text("colq1")));
+    fetchedColumns.add(new Pair<>(new Text("colf2"), new Text("colq2")));
 
     // Fake some iterators
-    ArrayList<IteratorSetting> iterators = new ArrayList<IteratorSetting>();
+    ArrayList<IteratorSetting> iterators = new ArrayList<>();
     IteratorSetting setting = new IteratorSetting(50, SummingCombiner.class);
     setting.addOption("foo", "bar");
     iterators.add(setting);
@@ -88,7 +87,6 @@ public class BatchInputSplitTest {
     split.setFetchedColumns(fetchedColumns);
     split.setToken(new PasswordToken("password"));
     split.setPrincipal("root");
-    DeprecationUtil.setMockInstance(split, true);
     split.setInstanceName("instance");
     split.setZooKeepers("localhost");
     split.setIterators(iterators);
@@ -113,7 +111,6 @@ public class BatchInputSplitTest {
     Assert.assertEquals(split.getToken(), newSplit.getToken());
     Assert.assertEquals(split.getPrincipal(), newSplit.getPrincipal());
     Assert.assertEquals(split.getInstanceName(), newSplit.getInstanceName());
-    Assert.assertEquals(DeprecationUtil.isMockInstanceSet(split), DeprecationUtil.isMockInstanceSet(newSplit));
     Assert.assertEquals(split.getZooKeepers(), newSplit.getZooKeepers());
     Assert.assertEquals(split.getIterators(), newSplit.getIterators());
     Assert.assertEquals(split.getLogLevel(), newSplit.getLogLevel());

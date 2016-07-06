@@ -82,6 +82,11 @@ import org.junit.Test;
 
 public class VolumeIT extends ConfigurableMacBase {
 
+  @SuppressWarnings("deprecation")
+  private static final Property INSTANCE_DFS_DIR = Property.INSTANCE_DFS_DIR;
+  @SuppressWarnings("deprecation")
+  private static final Property INSTANCE_DFS_URI = Property.INSTANCE_DFS_URI;
+
   private static final Text EMPTY = new Text();
   private static final Value EMPTY_VALUE = new Value(new byte[] {});
   private File volDirBase;
@@ -92,7 +97,6 @@ public class VolumeIT extends ConfigurableMacBase {
     return 5 * 60;
   }
 
-  @SuppressWarnings("deprecation")
   @Override
   public void configure(MiniAccumuloConfigImpl cfg, Configuration hadoopCoreSite) {
     File baseDir = cfg.getDir();
@@ -104,8 +108,8 @@ public class VolumeIT extends ConfigurableMacBase {
 
     // Run MAC on two locations in the local file system
     URI v1Uri = v1.toUri();
-    cfg.setProperty(Property.INSTANCE_DFS_DIR, v1Uri.getPath());
-    cfg.setProperty(Property.INSTANCE_DFS_URI, v1Uri.getScheme() + v1Uri.getHost());
+    cfg.setProperty(INSTANCE_DFS_DIR, v1Uri.getPath());
+    cfg.setProperty(INSTANCE_DFS_URI, v1Uri.getScheme() + v1Uri.getHost());
     cfg.setProperty(Property.INSTANCE_VOLUMES, v1.toString() + "," + v2.toString());
     cfg.setProperty(Property.INSTANCE_ZK_TIMEOUT, "15s");
 
@@ -121,7 +125,7 @@ public class VolumeIT extends ConfigurableMacBase {
     Connector connector = getConnector();
     String tableName = getUniqueNames(1)[0];
     connector.tableOperations().create(tableName);
-    SortedSet<Text> partitions = new TreeSet<Text>();
+    SortedSet<Text> partitions = new TreeSet<>();
     // with some splits
     for (String s : "d,m,t".split(","))
       partitions.add(new Text(s));
@@ -164,7 +168,7 @@ public class VolumeIT extends ConfigurableMacBase {
 
   private void verifyData(List<String> expected, Scanner createScanner) {
 
-    List<String> actual = new ArrayList<String>();
+    List<String> actual = new ArrayList<>();
 
     for (Entry<Key,Value> entry : createScanner) {
       Key k = entry.getKey();
@@ -180,7 +184,7 @@ public class VolumeIT extends ConfigurableMacBase {
   @Test
   public void testRelativePaths() throws Exception {
 
-    List<String> expected = new ArrayList<String>();
+    List<String> expected = new ArrayList<>();
 
     Connector connector = getConnector();
     String tableName = getUniqueNames(1)[0];
@@ -188,7 +192,7 @@ public class VolumeIT extends ConfigurableMacBase {
 
     String tableId = connector.tableOperations().tableIdMap().get(tableName);
 
-    SortedSet<Text> partitions = new TreeSet<Text>();
+    SortedSet<Text> partitions = new TreeSet<>();
     // with some splits
     for (String s : "c,g,k,p,s,v".split(","))
       partitions.add(new Text(s));
@@ -346,7 +350,7 @@ public class VolumeIT extends ConfigurableMacBase {
     cluster.start();
 
     // Make sure we can still read the tables (tableNames[0] is very likely to have a file still on v1)
-    List<String> expected = new ArrayList<String>();
+    List<String> expected = new ArrayList<>();
     for (int i = 0; i < 100; i++) {
       String row = String.format("%06d", i * 100 + 3);
       expected.add(row + ":cf1:cq1:1");
@@ -360,7 +364,7 @@ public class VolumeIT extends ConfigurableMacBase {
 
   private void writeData(String tableName, Connector conn) throws AccumuloException, AccumuloSecurityException, TableExistsException, TableNotFoundException,
       MutationsRejectedException {
-    TreeSet<Text> splits = new TreeSet<Text>();
+    TreeSet<Text> splits = new TreeSet<>();
     for (int i = 1; i < 100; i++) {
       splits.add(new Text(String.format("%06d", i * 100)));
     }
@@ -383,7 +387,7 @@ public class VolumeIT extends ConfigurableMacBase {
 
     Connector conn = getConnector();
 
-    List<String> expected = new ArrayList<String>();
+    List<String> expected = new ArrayList<>();
     for (int i = 0; i < 100; i++) {
       String row = String.format("%06d", i * 100 + 3);
       expected.add(row + ":cf1:cq1:1");

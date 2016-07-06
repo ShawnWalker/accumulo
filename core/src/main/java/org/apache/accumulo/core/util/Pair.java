@@ -73,15 +73,15 @@ public class Pair<A,B> {
   }
 
   public Entry<A,B> toMapEntry() {
-    return new SimpleImmutableEntry<A,B>(getFirst(), getSecond());
+    return new SimpleImmutableEntry<>(getFirst(), getSecond());
   }
 
   public Pair<B,A> swap() {
-    return new Pair<B,A>(getSecond(), getFirst());
+    return new Pair<>(getSecond(), getFirst());
   }
 
   public static <K2,V2,K1 extends K2,V1 extends V2> Pair<K2,V2> fromEntry(Entry<K1,V1> entry) {
-    return new Pair<K2,V2>(entry.getKey(), entry.getValue());
+    return new Pair<>(entry.getKey(), entry.getValue());
   }
 
 }

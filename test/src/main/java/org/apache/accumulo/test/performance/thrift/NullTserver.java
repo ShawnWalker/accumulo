@@ -183,7 +183,7 @@ public class NullTserver {
 
     @Override
     public List<ActiveScan> getActiveScans(TInfo tinfo, TCredentials credentials) throws ThriftSecurityException, TException {
-      return new ArrayList<ActiveScan>();
+      return new ArrayList<>();
     }
 
     @Override
@@ -206,7 +206,7 @@ public class NullTserver {
 
     @Override
     public List<ActiveCompaction> getActiveCompactions(TInfo tinfo, TCredentials credentials) throws ThriftSecurityException, TException {
-      return new ArrayList<ActiveCompaction>();
+      return new ArrayList<>();
     }
 
     @Override
@@ -257,7 +257,7 @@ public class NullTserver {
 
     TransactionWatcher watcher = new TransactionWatcher();
     ThriftClientHandler tch = new ThriftClientHandler(new AccumuloServerContext(new ServerConfigurationFactory(HdfsZooInstance.getInstance())), watcher);
-    Processor<Iface> processor = new Processor<Iface>(tch);
+    Processor<Iface> processor = new Processor<>(tch);
     TServerUtils.startTServer(context.getConfiguration(), ThriftServerType.CUSTOM_HS_HA, processor, "NullTServer",
         "null tserver", 2, 1, 1000, 10 * 1024 * 1024, null, null, -1, HostAndPort.fromParts("0.0.0.0", opts.port));
 
@@ -270,7 +270,7 @@ public class NullTserver {
     MetaDataTableScanner s = new MetaDataTableScanner(context, tableRange);
     long randomSessionID = opts.port;
     TServerInstance instance = new TServerInstance(addr, randomSessionID);
-    List<Assignment> assignments = new ArrayList<Assignment>();
+    List<Assignment> assignments = new ArrayList<>();
     while (s.hasNext()) {
       TabletLocationState next = s.next();
       assignments.add(new Assignment(next.extent, instance));

@@ -29,7 +29,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.ServerSocket;
 import java.net.UnknownHostException;
-import java.nio.ByteBuffer;
 import java.util.List;
 import java.util.concurrent.ExecutorService;
 
@@ -87,34 +86,6 @@ public class TServerUtilsTest {
     public int getZooKeepersSessionTimeOut() {
       return 30;
     }
-
-    @Deprecated
-    @Override
-    public Connector getConnector(String user, byte[] pass) throws AccumuloException, AccumuloSecurityException {
-      throw new UnsupportedOperationException();
-    }
-
-    @Deprecated
-    @Override
-    public Connector getConnector(String user, ByteBuffer pass) throws AccumuloException, AccumuloSecurityException {
-      throw new UnsupportedOperationException();
-    }
-
-    @Deprecated
-    @Override
-    public Connector getConnector(String user, CharSequence pass) throws AccumuloException, AccumuloSecurityException {
-      throw new UnsupportedOperationException();
-    }
-
-    @Deprecated
-    @Override
-    public AccumuloConfiguration getConfiguration() {
-      throw new UnsupportedOperationException();
-    }
-
-    @Deprecated
-    @Override
-    public void setConfiguration(AccumuloConfiguration conf) {}
 
     @Override
     public Connector getConnector(String principal, AuthenticationToken token) throws AccumuloException, AccumuloSecurityException {
@@ -344,7 +315,7 @@ public class TServerUtilsTest {
     AccumuloServerContext ctx = new AccumuloServerContext(factory);
     ClientServiceHandler clientHandler = new ClientServiceHandler(ctx, null, null);
     Iface rpcProxy = RpcWrapper.service(clientHandler, new Processor<Iface>(clientHandler));
-    Processor<Iface> processor = new Processor<Iface>(rpcProxy);
+    Processor<Iface> processor = new Processor<>(rpcProxy);
     // "localhost" explicitly to make sure we can always bind to that interface (avoids DNS misconfiguration)
     String hostname = "localhost";
 

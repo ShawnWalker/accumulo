@@ -37,7 +37,6 @@ import org.apache.accumulo.core.client.admin.CompactionConfig;
 import org.apache.accumulo.core.client.admin.DiskUsage;
 import org.apache.accumulo.core.client.admin.Locations;
 import org.apache.accumulo.core.client.admin.NewTableConfiguration;
-import org.apache.accumulo.core.client.admin.TimeType;
 import org.apache.accumulo.core.client.sample.SamplerConfiguration;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.iterators.IteratorUtil.IteratorScope;
@@ -49,7 +48,7 @@ import org.junit.Test;
 public class TableOperationsHelperTest {
 
   static class Tester extends TableOperationsHelper {
-    Map<String,Map<String,String>> settings = new HashMap<String,Map<String,String>>();
+    Map<String,Map<String,String>> settings = new HashMap<>();
 
     @Override
     public SortedSet<String> list() {
@@ -65,32 +64,10 @@ public class TableOperationsHelperTest {
     public void create(String tableName) throws AccumuloException, AccumuloSecurityException, TableExistsException {}
 
     @Override
-    @Deprecated
-    public void create(String tableName, boolean limitVersion) throws AccumuloException, AccumuloSecurityException, TableExistsException {
-      create(tableName, limitVersion, TimeType.MILLIS);
-    }
-
-    @Override
-    @Deprecated
-    public void create(String tableName, boolean versioningIter, TimeType timeType) throws AccumuloException, AccumuloSecurityException, TableExistsException {}
-
-    @Override
     public void create(String tableName, NewTableConfiguration ntc) throws AccumuloException, AccumuloSecurityException, TableExistsException {}
 
     @Override
     public void addSplits(String tableName, SortedSet<Text> partitionKeys) throws TableNotFoundException, AccumuloException, AccumuloSecurityException {}
-
-    @Deprecated
-    @Override
-    public Collection<Text> getSplits(String tableName) throws TableNotFoundException {
-      return null;
-    }
-
-    @Deprecated
-    @Override
-    public Collection<Text> getSplits(String tableName, int maxSplits) throws TableNotFoundException {
-      return null;
-    }
 
     @Override
     public Collection<Text> listSplits(String tableName) throws TableNotFoundException {
@@ -137,10 +114,6 @@ public class TableOperationsHelperTest {
     @Override
     public void rename(String oldTableName, String newTableName) throws AccumuloSecurityException, TableNotFoundException, AccumuloException,
         TableExistsException {}
-
-    @Deprecated
-    @Override
-    public void flush(String tableName) throws AccumuloException, AccumuloSecurityException {}
 
     @Override
     public void flush(String tableName, Text start, Text end, boolean wait) throws AccumuloException, AccumuloSecurityException, TableNotFoundException {}
@@ -256,12 +229,12 @@ public class TableOperationsHelperTest {
   }
 
   void check(TableOperationsHelper t, String tablename, String[] values) throws Exception {
-    Map<String,String> expected = new TreeMap<String,String>();
+    Map<String,String> expected = new TreeMap<>();
     for (String value : values) {
       String parts[] = value.split("=", 2);
       expected.put(parts[0], parts[1]);
     }
-    Map<String,String> actual = new TreeMap<String,String>();
+    Map<String,String> actual = new TreeMap<>();
     for (Entry<String,String> entry : t.getProperties(tablename)) {
       actual.put(entry.getKey(), entry.getValue());
     }

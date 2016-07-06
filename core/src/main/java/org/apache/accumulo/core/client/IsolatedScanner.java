@@ -194,7 +194,7 @@ public class IsolatedScanner extends ScannerOptions implements Scanner {
 
   public static class MemoryRowBuffer implements RowBuffer {
 
-    private ArrayList<Entry<Key,Value>> buffer = new ArrayList<Entry<Key,Value>>();
+    private ArrayList<Entry<Key,Value>> buffer = new ArrayList<>();
 
     @Override
     public void add(Entry<Key,Value> entry) {
@@ -236,24 +236,6 @@ public class IsolatedScanner extends ScannerOptions implements Scanner {
   @Override
   public Iterator<Entry<Key,Value>> iterator() {
     return new RowBufferingIterator(scanner, this, range, timeOut, batchSize, readaheadThreshold, bufferFactory);
-  }
-
-  @Deprecated
-  @Override
-  public void setTimeOut(int timeOut) {
-    if (timeOut == Integer.MAX_VALUE)
-      setTimeout(Long.MAX_VALUE, TimeUnit.MILLISECONDS);
-    else
-      setTimeout(timeOut, TimeUnit.SECONDS);
-  }
-
-  @Deprecated
-  @Override
-  public int getTimeOut() {
-    long timeout = getTimeout(TimeUnit.SECONDS);
-    if (timeout >= Integer.MAX_VALUE)
-      return Integer.MAX_VALUE;
-    return (int) timeout;
   }
 
   @Override

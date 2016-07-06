@@ -49,6 +49,8 @@ import org.junit.rules.TestName;
  *
  */
 public class FileUtilTest {
+  @SuppressWarnings("deprecation")
+  private static Property INSTANCE_DFS_DIR = Property.INSTANCE_DFS_DIR;
 
   @Rule
   public TemporaryFolder tmpDir = new TemporaryFolder(new File(System.getProperty("user.dir") + "/target"));
@@ -65,7 +67,7 @@ public class FileUtilTest {
 
   @Test
   public void testToPathStrings() {
-    Collection<FileRef> c = new java.util.ArrayList<FileRef>();
+    Collection<FileRef> c = new java.util.ArrayList<>();
     FileRef r1 = createMock(FileRef.class);
     expect(r1.path()).andReturn(new Path("/foo"));
     replay(r1);
@@ -82,7 +84,6 @@ public class FileUtilTest {
     Assert.assertEquals("/bar", iter.next());
   }
 
-  @SuppressWarnings("deprecation")
   @Test
   public void testCleanupIndexOpWithDfsDir() throws IOException {
     // And a "unique" tmp directory for each volume
@@ -90,8 +91,8 @@ public class FileUtilTest {
     assertTrue(tmp1.mkdirs() || tmp1.isDirectory());
     Path tmpPath1 = new Path(tmp1.toURI());
 
-    HashMap<Property,String> testProps = new HashMap<Property,String>();
-    testProps.put(Property.INSTANCE_DFS_DIR, accumuloDir.getAbsolutePath());
+    HashMap<Property,String> testProps = new HashMap<>();
+    testProps.put(INSTANCE_DFS_DIR, accumuloDir.getAbsolutePath());
 
     AccumuloConfiguration testConf = new FileUtilTestConfiguration(testProps);
     VolumeManager fs = VolumeManagerImpl.getLocal(accumuloDir.getAbsolutePath());
@@ -117,7 +118,7 @@ public class FileUtilTest {
     assertTrue(tmp2.mkdirs() || tmp2.isDirectory());
     Path tmpPath1 = new Path(tmp1.toURI()), tmpPath2 = new Path(tmp2.toURI());
 
-    HashMap<Property,String> testProps = new HashMap<Property,String>();
+    HashMap<Property,String> testProps = new HashMap<>();
     testProps.put(Property.INSTANCE_VOLUMES, v1.toURI().toString() + "," + v2.toURI().toString());
 
     AccumuloConfiguration testConf = new FileUtilTestConfiguration(testProps);
@@ -149,7 +150,7 @@ public class FileUtilTest {
     assertTrue(tmp2.mkdirs() || tmp2.isDirectory());
     Path tmpPath1 = new Path(tmp1.toURI()), tmpPath2 = new Path(tmp2.toURI());
 
-    HashMap<Property,String> testProps = new HashMap<Property,String>();
+    HashMap<Property,String> testProps = new HashMap<>();
     testProps.put(Property.INSTANCE_VOLUMES, v1.toURI().toString() + "," + v2.toURI().toString());
 
     AccumuloConfiguration testConf = new FileUtilTestConfiguration(testProps);
@@ -177,7 +178,7 @@ public class FileUtilTest {
     assertTrue(tmp2.mkdirs() || tmp2.isDirectory());
     Path tmpPath1 = new Path(tmp1.toURI()), tmpPath2 = new Path(tmp2.toURI());
 
-    HashMap<Property,String> testProps = new HashMap<Property,String>();
+    HashMap<Property,String> testProps = new HashMap<>();
     testProps.put(Property.INSTANCE_VOLUMES, v1.toURI().toString() + "," + v2.toURI().toString());
 
     AccumuloConfiguration testConf = new FileUtilTestConfiguration(testProps);
@@ -206,7 +207,7 @@ public class FileUtilTest {
     assertTrue(tmp2.mkdirs() || tmp2.isDirectory());
     Path tmpPath1 = new Path(tmp1.toURI()), tmpPath2 = new Path(tmp2.toURI());
 
-    HashMap<Property,String> testProps = new HashMap<Property,String>();
+    HashMap<Property,String> testProps = new HashMap<>();
     testProps.put(Property.INSTANCE_VOLUMES, v1.toURI().toString() + "," + v2.toURI().toString());
 
     AccumuloConfiguration testConf = new FileUtilTestConfiguration(testProps);
