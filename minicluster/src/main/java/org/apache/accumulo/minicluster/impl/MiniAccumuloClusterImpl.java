@@ -516,8 +516,8 @@ public class MiniAccumuloClusterImpl implements AccumuloCluster {
       Path instanceIdPath = Accumulo.getAccumuloInstanceIdPath(fs);
 
       String instanceIdFromFile = ZooUtil.getInstanceIDFromHdfs(instanceIdPath, cc, hadoopConf);
-      IZooReaderWriter zrw = new ZooReaderWriter(cc.get(Property.INSTANCE_ZK_HOST),
-          (int) cc.getTimeInMillis(Property.INSTANCE_ZK_TIMEOUT), "digest", ("accumulo:"+cc.get(Property.INSTANCE_SECRET)).getBytes(StandardCharsets.UTF_8));
+      IZooReaderWriter zrw = new ZooReaderWriter(cc.get(Property.INSTANCE_ZK_HOST), (int) cc.getTimeInMillis(Property.INSTANCE_ZK_TIMEOUT), "digest",
+          ("accumulo:" + cc.get(Property.INSTANCE_SECRET)).getBytes(StandardCharsets.UTF_8));
 
       String rootPath = ZooUtil.getRoot(instanceIdFromFile);
 

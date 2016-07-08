@@ -22,12 +22,11 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-/** 
- * Annotation denoting a type that should have only a single instance.  Unlike Guice's usual {@code @Singleton} annotation,
- * The instance of this type is created only as required.
+/**
+ * Annotation denoting a type that should have only a single instance. Unlike Guice's usual {@code @Singleton} annotation, The instance of this type is created
+ * only as required.
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.TYPE, ElementType.METHOD})
 @ScopeAnnotation
-public @interface LazySingleton {
-}
+public @interface LazySingleton {}

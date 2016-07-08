@@ -21,14 +21,13 @@ import com.google.inject.Provides;
 
 public class ConfigurationModule extends AbstractModule {
   @Override
-  protected void configure() {
-  }
-  
+  protected void configure() {}
+
   @Provides
   public DefaultConfiguration getDefaultConfiguration() {
     return DefaultConfiguration.getInstance();
   }
-  
+
   @Provides
   public SiteConfiguration getSiteConfiguration() {
     return SiteConfiguration.getInstance();

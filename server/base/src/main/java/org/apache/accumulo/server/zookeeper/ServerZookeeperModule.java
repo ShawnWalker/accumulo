@@ -25,9 +25,8 @@ import org.apache.accumulo.core.inject.Requires;
 @Requires(ConfigurationModule.class)
 public class ServerZookeeperModule extends AbstractModule {
   @Override
-  protected void configure() {    
-  }
-  
+  protected void configure() {}
+
   @Provides
   @Singleton
   public ZooReaderWriter getZooReaderWriter() {

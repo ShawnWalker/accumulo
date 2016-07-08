@@ -115,16 +115,13 @@ public class InjectorBuilder {
 
   /** Create an {@link Injector} with the given modules. */
   public Injector build(Stage stage) {
-    List<Module> instances = new ArrayList<>(new ReplacementTransitiveClosureSet(specifiedModules)
-            .stream()
-            .filter(m -> !removedModules.contains(m))
-            .map(m -> {
-                try {
-                  return m.newInstance();
-                } catch (InstantiationException | IllegalAccessException ex) {
-                  throw new IllegalStateException("Failed to instantiate " + m.getSimpleName(), ex);
-                }
-            }).collect(toList()));
+    List<Module> instances = new ArrayList<>(new ReplacementTransitiveClosureSet(specifiedModules).stream().filter(m -> !removedModules.contains(m)).map(m -> {
+      try {
+        return m.newInstance();
+      } catch (InstantiationException | IllegalAccessException ex) {
+        throw new IllegalStateException("Failed to instantiate " + m.getSimpleName(), ex);
+      }
+    }).collect(toList()));
     instances.addAll(additionalInstances);
 
     return Guice.createInjector(stage, instances);

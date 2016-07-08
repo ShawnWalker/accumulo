@@ -25,9 +25,8 @@ import org.apache.accumulo.core.client.Instance;
 public class ServerInstanceModule extends AbstractModule {
 
   @Override
-  protected void configure() {
-  }
-  
+  protected void configure() {}
+
   @Provides
   @Singleton
   protected Instance getInstance() {

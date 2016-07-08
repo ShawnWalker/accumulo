@@ -440,7 +440,7 @@ public class Monitor {
     log.info("Version " + Constants.VERSION);
     log.info("Instance " + instance.getInstanceID());
     Accumulo.init(fs, config, app);
-    Injector injector=InjectorBuilder.newRoot().add(MonitorModule.class).build(Stage.PRODUCTION);
+    Injector injector = InjectorBuilder.newRoot().add(MonitorModule.class).build(Stage.PRODUCTION);
     Monitor monitor = injector.getInstance(Monitor.class);
     DistributedTrace.enable(hostname, app, config.getConfiguration());
     try {
