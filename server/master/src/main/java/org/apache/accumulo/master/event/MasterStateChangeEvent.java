@@ -14,22 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.accumulo.server.master.state;
-
-import java.util.Collection;
-import java.util.Set;
+package org.apache.accumulo.master.event;
 
 import org.apache.accumulo.core.master.thrift.MasterState;
 
-public interface CurrentState {
-
-  Set<String> onlineTables();
-
-  Set<TServerInstance> onlineTabletServers();
-
-  Set<TServerInstance> shutdownServers();
-
-  Collection<MergeInfo> merges();
-
-  MasterState getMasterState();
+public class MasterStateChangeEvent extends GenericEvent {
+  public final MasterState oldState;
+  public final MasterState newState;
+  
+  public MasterStateChangeEvent(MasterState oldState, MasterState newState) {
+    super("State changed from %s to %s", oldState, newState);
+    this.oldState=oldState;
+    this.newState=newState;
+  }  
 }

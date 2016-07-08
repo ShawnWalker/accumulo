@@ -14,22 +14,19 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.accumulo.server.master.state;
+package org.apache.accumulo.master.event;
 
-import java.util.Collection;
-import java.util.Set;
-
-import org.apache.accumulo.core.master.thrift.MasterState;
-
-public interface CurrentState {
-
-  Set<String> onlineTables();
-
-  Set<TServerInstance> onlineTabletServers();
-
-  Set<TServerInstance> shutdownServers();
-
-  Collection<MergeInfo> merges();
-
-  MasterState getMasterState();
+/** An undifferentiated event. */
+public class GenericEvent {
+  private final String message;
+  private final Object[] args;
+  public GenericEvent(String message, Object... args) {
+    this.message=message;
+    this.args=args;
+  }
+  
+  @Override
+  public String toString() {
+    return String.format(message, args);
+  }
 }

@@ -98,15 +98,13 @@ class TabletGroupWatcher extends Daemon {
   private static final String ASSIGNMENT_BUFFER_SEPARATOR = ", ";
   private static final int ASSINGMENT_BUFFER_MAX_LENGTH = 4096;
 
-  private final Master master;
   final TabletStateStore store;
   final TabletGroupWatcher dependentWatcher;
   private MasterState masterState;
 
   final TableStats stats = new TableStats();
 
-  TabletGroupWatcher(Master master, TabletStateStore store, TabletGroupWatcher dependentWatcher) {
-    this.master = master;
+  TabletGroupWatcher(TabletStateStore store, TabletGroupWatcher dependentWatcher) {
     this.store = store;
     this.dependentWatcher = dependentWatcher;
   }
