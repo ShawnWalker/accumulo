@@ -168,15 +168,15 @@ import com.google.inject.Stage;
 import com.google.inject.name.Names;
 import javax.inject.Inject;
 import javax.inject.Named;
+import javax.inject.Singleton;
 import org.apache.accumulo.core.inject.InjectorBuilder;
-import org.apache.accumulo.core.inject.LazySingleton;
 
 /**
  * The Master is responsible for assigning and balancing tablets to tablet servers.
  *
  * The master will also coordinate log recoveries and reports general status.
  */
-@LazySingleton
+@Singleton
 public class Master extends AccumuloServerContext implements LiveTServerSet.Listener, TableObserver, CurrentState {
 
   final static Logger log = LoggerFactory.getLogger(Master.class);

@@ -157,7 +157,6 @@ public class InjectorBuilder {
     protected void configure() {
       binder().requireExplicitBindings();
       binder().disableCircularProxies();
-      binder().bindScope(LazySingleton.class, new LazySingletonScope());
       bind(LifecycleManager.class).to(LifecycleManagerImpl.class);
       LifecycleManagerImpl managerImpl = new LifecycleManagerImpl();
       bind(LifecycleManagerImpl.class).toInstance(managerImpl);
