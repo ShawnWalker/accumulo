@@ -30,26 +30,26 @@ import org.slf4j.LoggerFactory;
 
 @Singleton
 public class ManagedThreadPool extends AbstractExecutorService {
-  private final static Logger log=LoggerFactory.getLogger(ManagedThreadPool.class);
-  private final AtomicLong idCounter=new AtomicLong(0);
+  private final static Logger log = LoggerFactory.getLogger(ManagedThreadPool.class);
+  private final AtomicLong idCounter = new AtomicLong(0);
   private final ExecutorService corePool;
-  
+
   ManagedThreadPool() {
-    corePool=Executors.newCachedThreadPool(new ThreadFactory() {
+    corePool = Executors.newCachedThreadPool(new ThreadFactory() {
       @Override
       public Thread newThread(Runnable r) {
-        Thread t=new Thread(r);
-        t.setName("Idle thread "+idCounter.incrementAndGet());
+        Thread t = new Thread(r);
+        t.setName("Idle thread " + idCounter.incrementAndGet());
         return t;
       }
     });
   }
-  
+
   @PreDestroy
   void finish() throws InterruptedException {
     shutdownNow();
-    
-    for (boolean finished=awaitTermination(5, TimeUnit.SECONDS); !finished; corePool.awaitTermination(5, TimeUnit.SECONDS)) {
+
+    for (boolean finished = awaitTermination(5, TimeUnit.SECONDS); !finished; corePool.awaitTermination(5, TimeUnit.SECONDS)) {
       log.info("Awaiting shutdown of core thread pool");
     }
   }
