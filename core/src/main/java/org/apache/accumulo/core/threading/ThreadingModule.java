@@ -14,19 +14,17 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.accumulo.core.inject;
+package org.apache.accumulo.core.threading;
 
-import com.google.inject.Module;
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
+import com.google.inject.AbstractModule;
+import java.util.concurrent.Executor;
+import java.util.concurrent.ExecutorService;
 
-/**
- * Specify that this module's bindings expect other specified modules to be loaded.
- */
-@Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
-public @interface Requires {
-  public Class<? extends Module>[] value() default {};
+public class ThreadingModule extends AbstractModule {
+  @Override
+  protected void configure() {
+    bind(ManagedThreadPool.class);
+    bind(Executor.class).to(ManagedThreadPool.class);
+    bind(ExecutorService.class).to(ManagedThreadPool.class);
+  }
 }

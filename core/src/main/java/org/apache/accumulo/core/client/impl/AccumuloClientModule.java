@@ -19,9 +19,10 @@ package org.apache.accumulo.core.client.impl;
 import com.google.inject.AbstractModule;
 import org.apache.accumulo.core.conf.ConfigurationModule;
 import org.apache.accumulo.core.inject.Requires;
+import org.apache.accumulo.core.threading.ThreadingModule;
 
 /** Bindings for Accumulo clients. */
-@Requires(ConfigurationModule.class)
+@Requires({ConfigurationModule.class, ThreadingModule.class})
 public class AccumuloClientModule extends AbstractModule {
   @Override
   protected void configure() {}

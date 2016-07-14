@@ -149,11 +149,9 @@ public class LifecycleManagerImpl implements TypeListener, LifecycleManager {
    * An {@link InjectionListener} which registers all injected objects with {@code @PreDestroy} methods.
    */
   protected class PreDestroyListener<T> implements InjectionListener<T> {
-    private final TypeLiteral<T> typeLiteral;
     private final Collection<Method> pdMethods;
 
     PreDestroyListener(TypeLiteral<T> typeLiteral, Collection<Method> pdMethods, TypeEncounter<T> errorReporter) {
-      this.typeLiteral = typeLiteral;
       this.pdMethods = pdMethods;
       for (Method m : pdMethods) {
         try {

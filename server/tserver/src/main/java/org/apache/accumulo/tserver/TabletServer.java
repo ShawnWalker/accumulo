@@ -100,6 +100,7 @@ import org.apache.accumulo.core.data.thrift.TKeyValue;
 import org.apache.accumulo.core.data.thrift.TMutation;
 import org.apache.accumulo.core.data.thrift.TRange;
 import org.apache.accumulo.core.data.thrift.UpdateErrors;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 import org.apache.accumulo.core.iterators.IterationInterruptedException;
 import org.apache.accumulo.core.master.thrift.BulkImportState;
 import org.apache.accumulo.core.master.thrift.Compacting;
@@ -263,7 +264,6 @@ import com.google.inject.Injector;
 import com.google.inject.Stage;
 import javax.inject.Inject;
 import javax.inject.Singleton;
-import org.apache.accumulo.core.inject.InjectorBuilder;
 
 @Singleton
 public class TabletServer extends AccumuloServerContext implements Runnable {
