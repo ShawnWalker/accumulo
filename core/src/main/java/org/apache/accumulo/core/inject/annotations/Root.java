@@ -14,22 +14,16 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.accumulo.core.util;
+package org.apache.accumulo.core.inject.annotations;
 
-import org.apache.hadoop.conf.Configuration;
+import com.google.inject.BindingAnnotation;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
 
-public class CachedConfiguration {
-  private static Configuration configuration = null;
-
-  public synchronized static Configuration getInstance() {
-    if (configuration == null)
-      setInstance(new Configuration());
-    return configuration;
-  }
-
-  public synchronized static Configuration setInstance(Configuration update) {
-    Configuration result = configuration;
-    configuration = update;
-    return result;
-  }
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.PARAMETER, ElementType.METHOD})
+@BindingAnnotation
+public @interface Root {
 }

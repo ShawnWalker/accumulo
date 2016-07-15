@@ -26,12 +26,9 @@ import java.util.TreeMap;
 
 import org.apache.accumulo.core.client.ClientConfiguration;
 import org.apache.accumulo.core.client.ClientConfiguration.ClientProperty;
-import org.apache.accumulo.core.client.impl.ClientContext;
 import org.apache.accumulo.core.client.security.tokens.AuthenticationToken;
 import org.apache.accumulo.core.client.security.tokens.KerberosToken;
-import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.Property;
-import org.apache.accumulo.core.conf.SiteConfiguration;
 import org.apache.commons.configuration.ConfigurationException;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.slf4j.Logger;
@@ -42,6 +39,8 @@ import com.beust.jcommander.IStringConverter;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
 import com.beust.jcommander.converters.FileConverter;
+import org.apache.accumulo.core.inject.annotations.FromFiles;
+import org.apache.hadoop.conf.Configuration;
 
 public class ShellOptionsJC {
   private static final Logger log = LoggerFactory.getLogger(ShellOptionsJC.class);
@@ -49,6 +48,8 @@ public class ShellOptionsJC {
   @Parameter(names = {"-u", "--user"}, description = "username (defaults to your OS user)")
   private String username = null;
 
+  private final @FromFiles 
+  
   public static class PasswordConverter implements IStringConverter<String> {
     public static final String STDIN = "stdin";
 
@@ -296,7 +297,7 @@ public class ShellOptionsJC {
     return clientConfigFile;
   }
 
-  public ClientConfiguration getClientConfiguration() throws ConfigurationException, FileNotFoundException {
+  public ClientConfiguration getClientConfiguration(@FromFiles Configuration xmlConfig) throws ConfigurationException, FileNotFoundException {
     ClientConfiguration clientConfig = clientConfigFile == null ? ClientConfiguration.loadDefault() : new ClientConfiguration(getClientConfigFile());
     if (useSsl()) {
       clientConfig.setProperty(ClientProperty.INSTANCE_RPC_SSL_ENABLED, "true");
@@ -307,8 +308,7 @@ public class ShellOptionsJC {
 
     // Automatically try to add in the proper ZK from accumulo-site for backwards compat.
     if (!clientConfig.containsKey(ClientProperty.INSTANCE_ZK_HOST.getKey())) {
-      AccumuloConfiguration siteConf = SiteConfiguration.getInstance(ClientContext.convertClientConfig(clientConfig));
-      clientConfig.withZkHosts(siteConf.get(Property.INSTANCE_ZK_HOST));
+      clientConfig.withZkHosts(xmlConfig.get(Property.INSTANCE_ZK_HOST.getKey()));
     }
 
     // If the user provided the hosts, set the ZK for tracing too

@@ -160,7 +160,6 @@ import org.apache.accumulo.shell.commands.UsersCommand;
 import org.apache.accumulo.shell.commands.WhoAmICommand;
 import org.apache.accumulo.start.classloader.vfs.AccumuloVFSClassLoader;
 import org.apache.accumulo.start.classloader.vfs.ContextManager;
-import org.apache.accumulo.start.spi.KeywordExecutable;
 import org.apache.commons.cli.BasicParser;
 import org.apache.commons.cli.CommandLine;
 import org.apache.commons.cli.HelpFormatter;
@@ -176,17 +175,19 @@ import org.apache.log4j.Logger;
 
 import com.beust.jcommander.JCommander;
 import com.beust.jcommander.ParameterException;
-import com.google.auto.service.AutoService;
+import com.google.inject.Injector;
+import javax.inject.Singleton;
 
 import jline.console.ConsoleReader;
 import jline.console.UserInterruptException;
 import jline.console.history.FileHistory;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 
 /**
  * A convenient console interface to perform basic accumulo functions Includes auto-complete, help, and quoted strings with escape sequences
  */
-@AutoService(KeywordExecutable.class)
-public class Shell extends ShellOptions implements KeywordExecutable {
+@Singleton
+public class Shell extends ShellOptions {
   public static final Logger log = Logger.getLogger(Shell.class);
   private static final Logger audit = Logger.getLogger(Shell.class.getName() + ".audit");
 
@@ -242,10 +243,6 @@ public class Shell extends ShellOptions implements KeywordExecutable {
     }
   }
 
-  public Shell() throws IOException {
-    this(new ConsoleReader());
-  }
-
   public Shell(ConsoleReader reader) {
     super();
     this.reader = reader;
@@ -256,34 +253,7 @@ public class Shell extends ShellOptions implements KeywordExecutable {
    *
    * @return true if the shell was successfully configured, false otherwise.
    */
-  public boolean config(String... args) {
-    ShellOptionsJC options = new ShellOptionsJC();
-    JCommander jc = new JCommander();
-
-    jc.setProgramName("accumulo shell");
-    jc.addObject(options);
-    try {
-      jc.parse(args);
-    } catch (ParameterException e) {
-      jc.usage();
-      exitCode = 1;
-      return false;
-    }
-
-    if (options.isHelpEnabled()) {
-      jc.usage();
-      // Not an error
-      exitCode = 0;
-      return false;
-    }
-
-    if (options.getUnrecognizedOptions() != null) {
-      logError("Unrecognized Options: " + options.getUnrecognizedOptions().toString());
-      jc.usage();
-      exitCode = 1;
-      return false;
-    }
-
+  public boolean config(ShellOptionsJC options) {
     setDebugging(options.isDebugEnabled());
     authTimeout = TimeUnit.MINUTES.toNanos(options.getAuthTimeout());
     disableAuthTimeout = options.isAuthTimeoutDisabled();
@@ -567,27 +537,47 @@ public class Shell extends ShellOptions implements KeywordExecutable {
     return classloader;
   }
 
-  @Override
-  public String keyword() {
-    return "shell";
-  }
+  public static void main(String args[]) throws IOException {
+    ShellOptionsJC options = new ShellOptionsJC();
+    JCommander jc = new JCommander();
 
-  @Override
-  public void execute(final String[] args) throws IOException {
+    jc.setProgramName("accumulo shell");
+    jc.addObject(options);
     try {
-      if (!config(args)) {
-        System.exit(getExitCode());
+      jc.parse(args);
+    } catch (ParameterException e) {
+      jc.usage();
+      System.exit(1);
+    }
+
+    if (options.isHelpEnabled()) {
+      jc.usage();
+      // Not an error
+      System.exit(0);
+    }
+
+    if (options.getUnrecognizedOptions() != null) {
+      log.error("Unrecognized Options: " + options.getUnrecognizedOptions().toString());
+      jc.usage();
+      System.exit(1);
+    }
+
+    Injector injector=InjectorBuilder.newRoot()
+            .add(ShellModule.class)
+            .bindInstance(ConsoleReader.class, new ConsoleReader())
+            .build();
+
+    Shell shell=injector.getInstance(Shell.class);
+    try {
+      if (!shell.config(options)) {
+        System.exit(shell.getExitCode());
       }
 
-      System.exit(start());
+      System.exit(shell.start());
     } finally {
-      shutdown();
+      shell.shutdown();
       DistributedTrace.disable();
     }
-  }
-
-  public static void main(String args[]) throws IOException {
-    new Shell().execute(args);
   }
 
   public int start() throws IOException {

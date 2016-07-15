@@ -31,7 +31,7 @@ import org.apache.accumulo.core.client.mapreduce.AccumuloInputFormat;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
-import org.apache.accumulo.core.util.CachedConfiguration;
+import org.apache.accumulo.core.conf.CachedConfiguration;
 import org.apache.accumulo.test.continuous.ContinuousWalk.BadChecksumException;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;

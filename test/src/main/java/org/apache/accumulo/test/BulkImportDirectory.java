@@ -23,7 +23,7 @@ import java.util.List;
 import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.TableNotFoundException;
-import org.apache.accumulo.core.util.CachedConfiguration;
+import org.apache.accumulo.core.conf.CachedConfiguration;
 import org.apache.accumulo.server.cli.ClientOnRequiredTable;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;

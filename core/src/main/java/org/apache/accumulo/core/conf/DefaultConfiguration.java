@@ -21,11 +21,14 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Predicate;
+import javax.inject.Singleton;
+import org.apache.accumulo.core.inject.StaticFactory;
 
 /**
  * An {@link AccumuloConfiguration} that contains only default values for properties. This class is a singleton.
  */
-public class DefaultConfiguration extends AccumuloConfiguration {
+@Singleton
+public class DefaultConfiguration extends AccumuloConfiguration implements ConfigurationSource {
   private final static Map<String,String> resolvedProps;
   static {
     Map<String,String> m = new HashMap<>();
@@ -42,8 +45,9 @@ public class DefaultConfiguration extends AccumuloConfiguration {
    *
    * @return default configuration
    */
+  @Deprecated
   public static DefaultConfiguration getInstance() {
-    return new DefaultConfiguration();
+    return StaticFactory.getInstance(DefaultConfiguration.class);
   }
 
   @Override

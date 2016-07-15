@@ -21,7 +21,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import java.io.IOException;
 
 import org.apache.accumulo.core.conf.SiteConfiguration;
-import org.apache.accumulo.core.util.CachedConfiguration;
+import org.apache.accumulo.core.conf.CachedConfiguration;
 import org.apache.accumulo.server.fs.VolumeManager;
 import org.apache.accumulo.server.fs.VolumeManagerImpl;
 import org.apache.accumulo.server.zookeeper.DistributedWorkQueue.Processor;

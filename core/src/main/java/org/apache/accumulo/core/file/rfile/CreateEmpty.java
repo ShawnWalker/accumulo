@@ -24,7 +24,7 @@ import org.apache.accumulo.core.cli.Help;
 import org.apache.accumulo.core.conf.DefaultConfiguration;
 import org.apache.accumulo.core.file.FileSKVWriter;
 import org.apache.accumulo.core.file.rfile.bcfile.Compression;
-import org.apache.accumulo.core.util.CachedConfiguration;
+import org.apache.accumulo.core.conf.CachedConfiguration;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;

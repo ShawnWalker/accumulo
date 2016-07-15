@@ -22,7 +22,7 @@ import java.util.Random;
 import java.util.TreeSet;
 
 import org.apache.accumulo.core.client.impl.Tables;
-import org.apache.accumulo.core.util.CachedConfiguration;
+import org.apache.accumulo.core.conf.CachedConfiguration;
 import org.apache.accumulo.test.randomwalk.Environment;
 import org.apache.accumulo.test.randomwalk.State;
 import org.apache.accumulo.test.randomwalk.Test;

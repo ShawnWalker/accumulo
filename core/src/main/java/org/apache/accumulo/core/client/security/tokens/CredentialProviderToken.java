@@ -24,7 +24,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 import org.apache.accumulo.core.conf.CredentialProviderFactoryShim;
-import org.apache.accumulo.core.util.CachedConfiguration;
+import org.apache.accumulo.core.conf.CachedConfiguration;
 import org.apache.hadoop.conf.Configuration;
 
 /**

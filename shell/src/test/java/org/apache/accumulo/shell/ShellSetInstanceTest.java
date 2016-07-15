@@ -148,7 +148,7 @@ public class ShellSetInstanceTest {
   private void testSetInstance_HdfsZooInstance(boolean explicitHdfs, boolean onlyInstance, boolean onlyHosts) throws Exception {
     ClientConfiguration clientConf = createMock(ClientConfiguration.class);
     ShellOptionsJC opts = createMock(ShellOptionsJC.class);
-    expect(opts.getClientConfiguration()).andReturn(clientConf);
+    expect(shell.getClientConfiguration()).andReturn(clientConf);
     expect(opts.isHdfsZooInstance()).andReturn(explicitHdfs);
     if (!explicitHdfs) {
       expect(opts.getZooKeeperInstance()).andReturn(Collections.<String> emptyList());
@@ -221,7 +221,7 @@ public class ShellSetInstanceTest {
   private void testSetInstance_ZKInstance(boolean dashZ) throws Exception {
     ClientConfiguration clientConf = createMock(ClientConfiguration.class);
     ShellOptionsJC opts = createMock(ShellOptionsJC.class);
-    expect(opts.getClientConfiguration()).andReturn(clientConf);
+    expect(shell.getClientConfiguration()).andReturn(clientConf);
     expect(opts.isHdfsZooInstance()).andReturn(false);
     expect(clientConf.getKeys()).andReturn(Arrays.asList(ClientProperty.INSTANCE_NAME.getKey(), ClientProperty.INSTANCE_ZK_HOST.getKey()).iterator());
     expect(clientConf.getString(Property.GENERAL_SECURITY_CREDENTIAL_PROVIDER_PATHS.getKey())).andReturn(null);

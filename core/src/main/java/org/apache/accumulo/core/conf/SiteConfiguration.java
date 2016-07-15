@@ -16,13 +16,12 @@
  */
 package org.apache.accumulo.core.conf;
 
-import java.io.IOException;
 import java.util.Map;
-import java.util.Map.Entry;
 import java.util.function.Predicate;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import org.apache.accumulo.core.inject.StaticFactory;
 
-import org.apache.accumulo.core.util.CachedConfiguration;
-import org.apache.hadoop.conf.Configuration;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -37,157 +36,29 @@ import org.slf4j.LoggerFactory;
  * <p>
  * <b>Note</b>: Client code should not use this class, and it may be deprecated in the future.
  */
+@Singleton
 public class SiteConfiguration extends AccumuloConfiguration {
-  private static final Logger log = LoggerFactory.getLogger(SiteConfiguration.class);
+  static final Logger log = LoggerFactory.getLogger(SiteConfiguration.class);
 
-  private AccumuloConfiguration parent = null;
-  private static SiteConfiguration instance = null;
-
-  private static Configuration xmlConfig;
-
-  /**
-   * Not for consumers. Call {@link SiteConfiguration#getInstance(AccumuloConfiguration)} instead
-   */
-  SiteConfiguration(AccumuloConfiguration parent) {
-    this.parent = parent;
+  private ConfigurationSource source;
+  
+  @Inject
+  SiteConfiguration(ConfigurationSource source) {
+    this.source = source;
   }
-
-  /**
-   * Gets an instance of this class. A new instance is only created on the first call, and so the parent configuration cannot be changed later.
-   *
-   * @param parent
-   *          parent (default) configuration
-   * @throws RuntimeException
-   *           if the configuration is invalid
-   */
-  synchronized public static SiteConfiguration getInstance(AccumuloConfiguration parent) {
-    if (instance == null) {
-      instance = new SiteConfiguration(parent);
-      ConfigSanityCheck.validate(instance);
-    }
-    return instance;
-  }
-
+  
+  @Deprecated
   synchronized public static SiteConfiguration getInstance() {
-    return getInstance(DefaultConfiguration.getInstance());
-  }
-
-  synchronized private static Configuration getXmlConfig() {
-    String configFile = System.getProperty("org.apache.accumulo.config.file", "accumulo-site.xml");
-    if (xmlConfig == null) {
-      xmlConfig = new Configuration(false);
-
-      if (SiteConfiguration.class.getClassLoader().getResource(configFile) == null)
-        log.warn(configFile + " not found on classpath", new Throwable());
-      else
-        xmlConfig.addResource(configFile);
-    }
-    return xmlConfig;
+    return StaticFactory.getInstance(SiteConfiguration.class);
   }
 
   @Override
   public String get(Property property) {
-    String key = property.getKey();
-
-    // If the property is sensitive, see if CredentialProvider was configured.
-    if (property.isSensitive()) {
-      Configuration hadoopConf = getHadoopConfiguration();
-      if (null != hadoopConf) {
-        // Try to find the sensitive value from the CredentialProvider
-        try {
-          char[] value = CredentialProviderFactoryShim.getValueFromCredentialProvider(hadoopConf, key);
-          if (null != value) {
-            return new String(value);
-          }
-        } catch (IOException e) {
-          log.warn("Failed to extract sensitive property (" + key + ") from Hadoop CredentialProvider, falling back to accumulo-site.xml", e);
-        }
-      }
-    }
-
-    String value = getXmlConfig().get(key);
-
-    if (value == null || !property.getType().isValidFormat(value)) {
-      if (value != null)
-        log.error("Using default value for " + key + " due to improperly formatted " + property.getType() + ": " + value);
-      value = parent.get(property);
-    }
-    return value;
+    return source.get(property);
   }
 
   @Override
   public void getProperties(Map<String,String> props, Predicate<String> filter) {
-    parent.getProperties(props, filter);
-
-    for (Entry<String,String> entry : getXmlConfig())
-      if (filter.test(entry.getKey()))
-        props.put(entry.getKey(), entry.getValue());
-
-    // CredentialProvider should take precedence over site
-    Configuration hadoopConf = getHadoopConfiguration();
-    if (null != hadoopConf) {
-      try {
-        for (String key : CredentialProviderFactoryShim.getKeys(hadoopConf)) {
-          if (!Property.isValidPropertyKey(key) || !Property.isSensitive(key)) {
-            continue;
-          }
-
-          if (filter.test(key)) {
-            char[] value = CredentialProviderFactoryShim.getValueFromCredentialProvider(hadoopConf, key);
-            if (null != value) {
-              props.put(key, new String(value));
-            }
-          }
-        }
-      } catch (IOException e) {
-        log.warn("Failed to extract sensitive properties from Hadoop CredentialProvider, falling back to accumulo-site.xml", e);
-      }
-    }
-  }
-
-  protected Configuration getHadoopConfiguration() {
-    String credProviderPathsKey = Property.GENERAL_SECURITY_CREDENTIAL_PROVIDER_PATHS.getKey();
-    String credProviderPathsValue = getXmlConfig().get(credProviderPathsKey);
-
-    if (null != credProviderPathsValue) {
-      // We have configuration for a CredentialProvider
-      // Try to pull the sensitive password from there
-      Configuration conf = new Configuration(CachedConfiguration.getInstance());
-      conf.set(CredentialProviderFactoryShim.CREDENTIAL_PROVIDER_PATH, credProviderPathsValue);
-      return conf;
-    }
-
-    return null;
-  }
-
-  /**
-   * Clears the configuration properties in this configuration (but not the parent). This method supports testing and should not be called.
-   */
-  synchronized public static void clearInstance() {
-    instance = null;
-  }
-
-  /**
-   * Sets a property. This method supports testing and should not be called.
-   *
-   * @param property
-   *          property to set
-   * @param value
-   *          property value
-   */
-  public void set(Property property, String value) {
-    set(property.getKey(), value);
-  }
-
-  /**
-   * Sets a property. This method supports testing and should not be called.
-   *
-   * @param key
-   *          key of property to set
-   * @param value
-   *          property value
-   */
-  public void set(String key, String value) {
-    getXmlConfig().set(key, value);
+    source.getProperties(props, filter);
   }
 }

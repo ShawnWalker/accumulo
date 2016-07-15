@@ -24,7 +24,7 @@ import java.util.List;
 
 import org.apache.accumulo.core.data.ColumnUpdate;
 import org.apache.accumulo.core.data.Value;
-import org.apache.accumulo.core.util.CachedConfiguration;
+import org.apache.accumulo.core.conf.CachedConfiguration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.ReflectionUtils;
 import org.junit.Test;
