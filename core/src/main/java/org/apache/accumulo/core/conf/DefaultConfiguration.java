@@ -22,7 +22,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 import java.util.function.Predicate;
 import javax.inject.Singleton;
-import org.apache.accumulo.core.inject.StaticFactory;
 
 /**
  * An {@link AccumuloConfiguration} that contains only default values for properties. This class is a singleton.
@@ -45,9 +44,8 @@ public class DefaultConfiguration extends AccumuloConfiguration {
    *
    * @return default configuration
    */
-  @Deprecated
   public static DefaultConfiguration getInstance() {
-    return StaticFactory.getInstance(DefaultConfiguration.class);
+    return new DefaultConfiguration();
   }
 
   @Override

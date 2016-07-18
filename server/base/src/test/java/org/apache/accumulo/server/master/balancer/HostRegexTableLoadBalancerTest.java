@@ -32,8 +32,10 @@ import org.apache.accumulo.core.client.impl.thrift.ThriftSecurityException;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.ConfigurationCopy;
 import org.apache.accumulo.core.conf.Property;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
 import org.apache.accumulo.core.data.impl.KeyExtent;
 import org.apache.accumulo.core.data.thrift.TKeyExtent;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 import org.apache.accumulo.core.master.thrift.TabletServerStatus;
 import org.apache.accumulo.core.tabletserver.thrift.TabletStats;
 import org.apache.accumulo.fate.util.UtilWaitThread;
@@ -43,9 +45,14 @@ import org.apache.accumulo.server.master.state.TServerInstance;
 import org.apache.accumulo.server.master.state.TabletMigration;
 import org.apache.thrift.TException;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class HostRegexTableLoadBalancerTest extends BaseHostRegexTableLoadBalancerTest {
+  @BeforeClass
+  public static void initializeStaticFactory() {
+    InjectorBuilder.newRoot().add(SiteConfigurationModule.class).build();
+  }
 
   @Test
   public void testInit() {

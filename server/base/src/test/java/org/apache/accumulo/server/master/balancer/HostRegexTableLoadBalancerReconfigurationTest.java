@@ -26,7 +26,9 @@ import java.util.Set;
 import java.util.Map.Entry;
 
 import org.apache.accumulo.core.client.impl.thrift.ThriftSecurityException;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
 import org.apache.accumulo.core.data.impl.KeyExtent;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 import org.apache.accumulo.core.tabletserver.thrift.TabletStats;
 import org.apache.accumulo.fate.util.UtilWaitThread;
 import org.apache.accumulo.server.conf.ServerConfiguration;
@@ -34,9 +36,14 @@ import org.apache.accumulo.server.master.state.TServerInstance;
 import org.apache.accumulo.server.master.state.TabletMigration;
 import org.apache.thrift.TException;
 import org.junit.Assert;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class HostRegexTableLoadBalancerReconfigurationTest extends BaseHostRegexTableLoadBalancerTest {
+  @BeforeClass
+  public static void initializeStaticFactory() {
+    InjectorBuilder.newRoot().add(SiteConfigurationModule.class).build();
+  }
 
   private Map<KeyExtent,TServerInstance> assignments = new HashMap<>();
 

@@ -30,6 +30,8 @@ import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.ConfigurationCopy;
 import org.apache.accumulo.core.conf.DefaultConfiguration;
 import org.apache.accumulo.core.conf.Property;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 import org.apache.accumulo.core.security.thrift.TCredentials;
 import org.junit.After;
 import org.junit.Assert;
@@ -37,6 +39,9 @@ import org.junit.Before;
 import org.junit.Test;
 
 public class TCredentialsUpdatingInvocationHandlerTest {
+  static {
+    InjectorBuilder.newRoot().add(SiteConfigurationModule.class).build();
+  }
   private static final DefaultConfiguration DEFAULT_CONFIG = DefaultConfiguration.getInstance();
 
   TCredentialsUpdatingInvocationHandler<Object> proxy;

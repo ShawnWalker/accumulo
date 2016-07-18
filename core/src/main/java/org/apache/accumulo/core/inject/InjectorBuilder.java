@@ -56,25 +56,15 @@ public class InjectorBuilder {
   }
 
   /** Add specific module instances to the {@code InjectorBuilder}. */
-  public InjectorBuilder addRaw(Collection<? extends Module> rawModules) {
-    this.additionalInstances.addAll(rawModules);
-    return this;
-  }
-
-  /** Add specific module instances to the {@code InjectorBuilder}. */
-  public InjectorBuilder addRaw(Module... rawModules) {
-    return addRaw(Arrays.asList(rawModules));
-  }
-
-  /** Add modules to the builder for inclusion in the eventual {@link Injector}. */
-  public InjectorBuilder add(Collection<Class<? extends Module>> modules) {
-    specifiedModules.addAll(modules);
+  public InjectorBuilder addRaw(Module rawModule) {
+    this.additionalInstances.add(rawModule);
     return this;
   }
 
   /** Add modules to the builder for inclusion in the eventual {@link Injector}. */
-  public InjectorBuilder add(Class<? extends Module>... modules) {
-    return add(Arrays.asList(modules));
+  public InjectorBuilder add(Class<? extends Module> module) {
+    specifiedModules.add(module);
+    return this;
   }
 
   /** Create a binding for a specific instance. */

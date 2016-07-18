@@ -21,15 +21,23 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.util.List;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
 
 import org.apache.accumulo.core.data.ColumnUpdate;
 import org.apache.accumulo.core.data.Value;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 import org.apache.accumulo.core.inject.StaticFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.io.Text;
 import org.apache.hadoop.util.ReflectionUtils;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class ServerMutationTest {
+  @BeforeClass
+  public static void initializeStaticFactory() {
+    InjectorBuilder.newRoot().add(SiteConfigurationModule.class).build();
+  }
 
   @Test
   public void test() throws Exception {

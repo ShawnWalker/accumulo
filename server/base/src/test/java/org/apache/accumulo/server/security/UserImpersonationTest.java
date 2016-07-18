@@ -39,8 +39,15 @@ import org.junit.Test;
 
 import com.google.common.base.Joiner;
 import com.google.common.collect.ImmutableMap;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
+import org.apache.accumulo.core.inject.InjectorBuilder;
+import org.junit.BeforeClass;
 
 public class UserImpersonationTest {
+  @BeforeClass
+  public static void initializeStaticFactory() {
+    InjectorBuilder.newRoot().add(SiteConfigurationModule.class).build();
+  }
 
   private ConfigurationCopy cc;
   private AccumuloConfiguration conf;

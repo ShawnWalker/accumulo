@@ -32,7 +32,8 @@ import org.apache.accumulo.core.client.impl.Credentials;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.Property;
-import org.apache.accumulo.core.conf.SiteConfiguration;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 import org.apache.accumulo.server.conf.ServerConfigurationFactory;
 import org.apache.accumulo.server.rpc.SaslServerConnectionParams;
 import org.apache.accumulo.server.rpc.ThriftServerType;
@@ -44,12 +45,18 @@ import org.easymock.EasyMock;
 import org.easymock.IAnswer;
 import org.junit.Assert;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class AccumuloServerContextTest {
 
   private UserGroupInformation testUser;
   private String username;
+
+  @BeforeClass
+  public static void initializeStaticFactory() {
+    InjectorBuilder.newRoot().add(SiteConfigurationModule.class).build();
+  }
 
   @Before
   public void setup() throws Exception {
@@ -74,7 +81,7 @@ public class AccumuloServerContextTest {
         clientConf.setProperty(ClientProperty.INSTANCE_RPC_SASL_ENABLED, "true");
         clientConf.setProperty(ClientProperty.KERBEROS_SERVER_PRIMARY, "accumulo");
         final AccumuloConfiguration conf = ClientContext.convertClientConfig(clientConf);
-        SiteConfiguration siteConfig = EasyMock.createMock(SiteConfiguration.class);
+        AccumuloConfiguration siteConfig = EasyMock.createMock(AccumuloConfiguration.class);
 
         EasyMock.expect(siteConfig.getBoolean(Property.INSTANCE_RPC_SASL_ENABLED)).andReturn(true);
 

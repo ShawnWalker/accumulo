@@ -716,7 +716,8 @@ public class Initialize implements KeywordExecutable {
             + ". It is highly recommended that this property be removed as data could still be written to this volume.");
     }
 
-    if (ServerConstants.DATA_VERSION != Accumulo.getAccumuloPersistentVersion(versionPath.getFileSystem(StaticFactory.getInstance(Configuration.class)), versionPath)) {
+    if (ServerConstants.DATA_VERSION != Accumulo.getAccumuloPersistentVersion(versionPath.getFileSystem(StaticFactory.getInstance(Configuration.class)),
+        versionPath)) {
       throw new IOException("Accumulo " + Constants.VERSION + " cannot initialize data version " + Accumulo.getAccumuloPersistentVersion(fs));
     }
 

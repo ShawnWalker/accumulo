@@ -25,7 +25,7 @@ import java.util.function.Predicate;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.apache.accumulo.core.inject.Decoratee;
-import org.apache.accumulo.core.inject.DecoratorModuleBuilder;
+import org.apache.accumulo.core.inject.Decorators;
 import org.apache.accumulo.core.inject.InjectorBuilder;
 
 import org.junit.Assert;
@@ -83,6 +83,9 @@ public class SiteConfigurationTest {
     }
   }
 
+  @Inject
+  private @Site AccumuloConfiguration siteCfg;
+  
   @Test
   public void testOnlySensitivePropertiesExtractedFromCredetialProvider() throws SecurityException, NoSuchMethodException {
     if (!isCredentialProviderAvailable) {
@@ -93,10 +96,9 @@ public class SiteConfigurationTest {
         .newRoot()
         .add(ConfigurationModule.class)
         .addRaw(
-            DecoratorModuleBuilder.of(AccumuloConfiguration.class).buildChain(DefaultConfiguration.class, FakeFileConfig.class, SensitiveConfiguration.class)
-                .in(Singleton.class)).build();
-
-    AccumuloConfiguration siteCfg = inj.getInstance(AccumuloConfiguration.class);
+            Decorators.of(AccumuloConfiguration.class).setBase(DefaultConfiguration.class).decorateWith(FakeFileConfig.class)
+                .decorateWith(SensitiveConfiguration.class).buildIn(Singleton.class))
+        .buildTestInjector(this);
 
     Map<String,String> props = new HashMap<>();
     Predicate<String> all = x -> true;

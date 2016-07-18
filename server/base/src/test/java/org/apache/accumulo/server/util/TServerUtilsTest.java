@@ -42,6 +42,8 @@ import org.apache.accumulo.core.client.security.tokens.AuthenticationToken;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.ConfigurationCopy;
 import org.apache.accumulo.core.conf.Property;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 import org.apache.accumulo.server.AccumuloServerContext;
 import org.apache.accumulo.server.client.ClientServiceHandler;
 import org.apache.accumulo.server.conf.ServerConfigurationFactory;
@@ -54,6 +56,9 @@ import org.junit.After;
 import org.junit.Test;
 
 public class TServerUtilsTest {
+  static {
+    InjectorBuilder.newRoot().add(SiteConfigurationModule.class).build();
+  }
 
   protected static class TestInstance implements Instance {
 

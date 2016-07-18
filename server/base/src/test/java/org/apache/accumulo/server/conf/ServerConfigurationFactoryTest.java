@@ -31,7 +31,8 @@ import static org.junit.Assert.assertSame;
 import org.apache.accumulo.core.client.Instance;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.DefaultConfiguration;
-import org.apache.accumulo.core.conf.SiteConfiguration;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 import org.apache.accumulo.fate.zookeeper.ZooCache;
 import org.apache.accumulo.fate.zookeeper.ZooCacheFactory;
 import org.junit.After;
@@ -50,6 +51,8 @@ public class ServerConfigurationFactoryTest {
 
   @BeforeClass
   public static void setUpClass() throws Exception {
+    InjectorBuilder.newRoot().add(SiteConfigurationModule.class).build();
+
     zcf = createMock(ZooCacheFactory.class);
     zc = createMock(ZooCache.class);
     expect(zcf.getZooCache(eq(ZK_HOST), eq(ZK_TIMEOUT), anyObject(NamespaceConfWatcher.class))).andReturn(zc);
@@ -107,7 +110,7 @@ public class ServerConfigurationFactoryTest {
   @Test
   public void testGetSiteConfiguration() {
     ready();
-    SiteConfiguration c = scf.getSiteConfiguration();
+    AccumuloConfiguration c = scf.getSiteConfiguration();
     assertNotNull(c);
   }
 

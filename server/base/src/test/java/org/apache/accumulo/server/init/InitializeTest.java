@@ -25,15 +25,18 @@ import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 
 import java.io.IOException;
+import org.apache.accumulo.core.conf.AccumuloConfiguration;
 
 import org.apache.accumulo.core.conf.Property;
-import org.apache.accumulo.core.conf.SiteConfiguration;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 import org.apache.accumulo.fate.zookeeper.IZooReaderWriter;
 import org.apache.accumulo.server.fs.VolumeManager;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Ignore;
 import org.junit.Test;
 
@@ -41,6 +44,11 @@ import org.junit.Test;
  * This test is not thread-safe.
  */
 public class InitializeTest {
+  @BeforeClass
+  public static void initializeStaticFactory() {
+    InjectorBuilder.newRoot().add(SiteConfigurationModule.class).build();
+  }
+
   @SuppressWarnings("deprecation")
   private static Property INSTANCE_DFS_DIR = Property.INSTANCE_DFS_DIR;
   @SuppressWarnings("deprecation")
@@ -48,7 +56,7 @@ public class InitializeTest {
 
   private Configuration conf;
   private VolumeManager fs;
-  private SiteConfiguration sconf;
+  private AccumuloConfiguration sconf;
   private IZooReaderWriter zooOrig;
   private IZooReaderWriter zoo;
 
@@ -56,7 +64,7 @@ public class InitializeTest {
   public void setUp() throws Exception {
     conf = createMock(Configuration.class);
     fs = createMock(VolumeManager.class);
-    sconf = createMock(SiteConfiguration.class);
+    sconf = createMock(AccumuloConfiguration.class);
     zoo = createMock(IZooReaderWriter.class);
     zooOrig = Initialize.getZooReaderWriter();
     Initialize.setZooReaderWriter(zoo);

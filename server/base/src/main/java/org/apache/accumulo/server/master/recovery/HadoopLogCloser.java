@@ -24,6 +24,7 @@ import org.apache.accumulo.core.conf.Property;
 import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.accumulo.server.fs.ViewFSUtils;
 import org.apache.accumulo.server.fs.VolumeManager;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.LocalFileSystem;
 import org.apache.hadoop.fs.Path;

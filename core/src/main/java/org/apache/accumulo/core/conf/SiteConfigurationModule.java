@@ -19,7 +19,7 @@ package org.apache.accumulo.core.conf;
 import com.google.inject.AbstractModule;
 import com.google.inject.Key;
 import javax.inject.Singleton;
-import org.apache.accumulo.core.inject.DecoratorModuleBuilder;
+import org.apache.accumulo.core.inject.Decorators;
 import org.apache.accumulo.core.inject.Requires;
 
 @Requires(ConfigurationModule.class)
@@ -39,6 +39,7 @@ public class SiteConfigurationModule extends AbstractModule {
 
   @Override
   protected void configure() {
-    install(DecoratorModuleBuilder.of(KEY).buildChain(DefaultConfiguration.class, XmlFileConfiguration.class, SensitiveConfiguration.class).in(Singleton.class));
+    install(Decorators.of(KEY).setBase(DefaultConfiguration.class).decorateWith(XmlFileConfiguration.class).decorateWith(SensitiveConfiguration.class)
+        .buildIn(Singleton.class));
   }
 }

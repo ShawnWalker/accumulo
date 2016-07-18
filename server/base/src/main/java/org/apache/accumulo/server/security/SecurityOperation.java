@@ -33,11 +33,12 @@ import org.apache.accumulo.core.client.impl.thrift.SecurityErrorCode;
 import org.apache.accumulo.core.client.impl.thrift.ThriftSecurityException;
 import org.apache.accumulo.core.client.security.tokens.AuthenticationToken;
 import org.apache.accumulo.core.conf.Property;
-import org.apache.accumulo.core.conf.SiteConfiguration;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
 import org.apache.accumulo.core.data.thrift.IterInfo;
 import org.apache.accumulo.core.data.thrift.TColumn;
 import org.apache.accumulo.core.data.thrift.TKeyExtent;
 import org.apache.accumulo.core.data.thrift.TRange;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.accumulo.core.master.thrift.FateOperation;
 import org.apache.accumulo.core.metadata.MetadataTable;
 import org.apache.accumulo.core.metadata.RootTable;
@@ -95,15 +96,15 @@ public class SecurityOperation {
   }
 
   protected static Authenticator getAuthenticator(String instanceId, boolean initialize) {
-    Authenticator toRet = StaticFactory.getInstance(SiteConfigurationModule.KEY).instantiateClassProperty(Property.INSTANCE_SECURITY_AUTHENTICATOR, Authenticator.class,
-        ZKAuthenticator.getInstance());
+    Authenticator toRet = StaticFactory.getInstance(SiteConfigurationModule.KEY).instantiateClassProperty(Property.INSTANCE_SECURITY_AUTHENTICATOR,
+        Authenticator.class, ZKAuthenticator.getInstance());
     toRet.initialize(instanceId, initialize);
     return toRet;
   }
 
   protected static PermissionHandler getPermHandler(String instanceId, boolean initialize) {
-    PermissionHandler toRet = StaticFactory.getInstance(SiteConfigurationModule.KEY).instantiateClassProperty(Property.INSTANCE_SECURITY_PERMISSION_HANDLER, PermissionHandler.class,
-        ZKPermHandler.getInstance());
+    PermissionHandler toRet = StaticFactory.getInstance(SiteConfigurationModule.KEY).instantiateClassProperty(Property.INSTANCE_SECURITY_PERMISSION_HANDLER,
+        PermissionHandler.class, ZKPermHandler.getInstance());
     toRet.initialize(instanceId, initialize);
     return toRet;
   }

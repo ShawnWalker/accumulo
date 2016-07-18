@@ -72,10 +72,8 @@ public class DecoratorModuleBuilderTest {
       @Override
       protected void configure() {
         bind(Appender.class).annotatedWith(Names.named("foo")).to(BaseAppender.class);
-        install(DecoratorModuleBuilder
-            .of(Appender.class)
-            .buildChain(Key.get(Appender.class, Names.named("foo")), AppendADecorator.class, AppendBDecorator.class, AppendADecorator.class,
-                AppendADecorator.class).in(Singleton.class));
+        install(Decorators.of(Appender.class).setBase(Key.get(Appender.class, Names.named("foo"))).decorateWith(AppendADecorator.class)
+            .decorateWith(AppendBDecorator.class).decorateWith(AppendADecorator.class).decorateWith(AppendADecorator.class).buildIn(Singleton.class));
       }
     });
 

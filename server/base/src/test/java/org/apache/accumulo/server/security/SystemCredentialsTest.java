@@ -26,6 +26,8 @@ import java.util.UUID;
 import org.apache.accumulo.core.client.Instance;
 import org.apache.accumulo.core.client.impl.ConnectorImpl;
 import org.apache.accumulo.core.client.impl.Credentials;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 import org.apache.accumulo.server.ServerConstants;
 import org.apache.accumulo.server.security.SystemCredentials.SystemToken;
 import org.easymock.EasyMock;
@@ -36,6 +38,10 @@ import org.junit.Test;
 import org.junit.rules.TestName;
 
 public class SystemCredentialsTest {
+  @BeforeClass
+  public static void initializeStaticFactory() {
+    InjectorBuilder.newRoot().add(SiteConfigurationModule.class).build();
+  }
 
   @Rule
   public TestName test = new TestName();

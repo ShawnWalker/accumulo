@@ -33,7 +33,9 @@ import java.util.function.Predicate;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.DefaultConfiguration;
 import org.apache.accumulo.core.conf.Property;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
 import org.apache.accumulo.core.file.FileSKVIterator;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 import org.apache.accumulo.server.fs.FileRef;
 import org.apache.accumulo.server.fs.VolumeManager;
 import org.apache.accumulo.server.fs.VolumeManagerImpl;
@@ -49,6 +51,10 @@ import org.junit.rules.TestName;
  *
  */
 public class FileUtilTest {
+  static {
+    InjectorBuilder.newRoot().add(SiteConfigurationModule.class).build();
+  }
+
   @SuppressWarnings("deprecation")
   private static Property INSTANCE_DFS_DIR = Property.INSTANCE_DFS_DIR;
 

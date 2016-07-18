@@ -28,7 +28,7 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-import java.util.Arrays;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.function.Consumer;
 import javax.inject.Provider;
@@ -50,50 +50,95 @@ import javax.inject.Qualifier;
  * {@code install(DecoratorModuleBuilder.of(Foo.class).buildChain(FooBase.class, FooDecorator1.class, FooDecorator2.class)); }
  *
  */
-public class DecoratorModuleBuilder<T> {
+public class Decorators<T> {
   private final Key<T> targetKey;
 
-  protected DecoratorModuleBuilder(Key<T> targetKey) {
+  protected Decorators(Key<T> targetKey) {
     this.targetKey = targetKey;
   }
 
-  public static <T> DecoratorModuleBuilder<T> of(Key<T> targetKey) {
-    return new DecoratorModuleBuilder<>(targetKey);
+  public static <T> Decorators<T> of(Key<T> targetKey) {
+    return new Decorators<>(targetKey);
   }
 
-  public static <T> DecoratorModuleBuilder<T> of(TypeLiteral<T> typeLiteral) {
-    return new DecoratorModuleBuilder<>(Key.get(typeLiteral));
+  public static <T> Decorators<T> of(TypeLiteral<T> typeLiteral) {
+    return new Decorators<>(Key.get(typeLiteral));
   }
 
-  public static <T> DecoratorModuleBuilder<T> of(Class<T> clazz) {
-    return new DecoratorModuleBuilder<>(Key.get(clazz));
+  public static <T> Decorators<T> of(Class<T> clazz) {
+    return new Decorators<>(Key.get(clazz));
   }
 
-  public DecoratorModule buildChain(Class<? extends T> base, Class<? extends T>... decorators) {
-    Key<? extends T> baseKey = Key.get(base);
-    return DecoratorModuleBuilder.this.buildChain(baseKey, decorators);
+  /** Set the base object of the decorator chain being built. */
+  public DecoratorChainBuilder setBase(Class<? extends T> clazz) {
+    return setBase(Key.get(clazz));
   }
 
-  public DecoratorModule buildChain(Key<? extends T> base, Class<? extends T>... decorators) {
-    TypeLiteral<? extends T>[] decoratorTypes = new TypeLiteral[decorators.length];
-    for (int i = 0; i < decorators.length; ++i) {
-      decoratorTypes[i] = TypeLiteral.get(decorators[i]);
+  /** Set the base object of the decorator chain being built. */
+  public DecoratorChainBuilder setBase(TypeLiteral<? extends T> typeLiteral) {
+    return setBase(Key.get(typeLiteral));
+  }
+
+  /** Set the base class of the decorator chain being built. */
+  public DecoratorChainBuilder setBase(Key<? extends T> baseKey) {
+    return new DecoratorChainBuilder(baseKey);
+  }
+
+  public class DecoratorChainBuilder {
+    private final Key<? extends T> base;
+    private final List<TypeLiteral<? extends T>> decorators = new ArrayList<>();
+
+    DecoratorChainBuilder(Key<? extends T> base) {
+      this.base = base;
     }
-    return buildChain(base, decoratorTypes);
+
+    /** Add another decorator onto the decorator chain. */
+    public DecoratorChainBuilder decorateWith(TypeLiteral<? extends T> decorator) {
+      this.decorators.add(decorator);
+      return this;
+    }
+
+    /** Add another decorator onto the decorator chain. */
+    public DecoratorChainBuilder decorateWith(Class<? extends T> decorator) {
+      return DecoratorChainBuilder.this.decorateWith(TypeLiteral.get(decorator));
+    }
+
+    /** Create a module which builds the decorator chain. */
+    public Module build() {
+      return new DecoratorModule(base, decorators, (ScopedBindingBuilder sbb) -> {});
+    }
+
+    /** Create a module which builds the decorator chain, specifying a scope for the final built object. */
+    public Module buildIn(Class<? extends Annotation> scopeAnnotation) {
+      return new DecoratorModule(base, decorators, (ScopedBindingBuilder sbb) -> {
+        sbb.in(scopeAnnotation);
+      });
+    }
+
+    /** Create a module which builds the decorator chain, specifying a scope for the final built object. */
+    public Module buildIn(Scope scope) {
+      return new DecoratorModule(base, decorators, (ScopedBindingBuilder sbb) -> {
+        sbb.in(scope);
+      });
+    }
+
+    /** Create a module which builds the decorator chain, specifying that the final object should be built as an eager singleton. */
+    public Module buildAsEagerSingleton() {
+      return new DecoratorModule(base, decorators, (ScopedBindingBuilder sbb) -> {
+        sbb.asEagerSingleton();
+      });
+    }
   }
 
-  public DecoratorModule buildChain(Key<? extends T> base, TypeLiteral<? extends T>... decorators) {
-    return new DecoratorModule(base, Arrays.asList(decorators));
-  }
-
-  public class DecoratorModule extends AbstractModule {
+  private class DecoratorModule extends AbstractModule {
     private final Key<? extends T> base;
     private final List<TypeLiteral<? extends T>> decorators;
-    private Consumer<ScopedBindingBuilder> scoper = (ScopedBindingBuilder sbb) -> {};
+    private final Consumer<ScopedBindingBuilder> scoper;
 
-    private DecoratorModule(Key<? extends T> base, List<TypeLiteral<? extends T>> decorators) {
+    private DecoratorModule(Key<? extends T> base, List<TypeLiteral<? extends T>> decorators, Consumer<ScopedBindingBuilder> scoper) {
       this.base = base;
       this.decorators = decorators;
+      this.scoper = scoper;
     }
 
     @Override
@@ -101,24 +146,9 @@ public class DecoratorModuleBuilder<T> {
       Provider<Injector> injectorProvider = getProvider(Injector.class);
       Provider<? extends T> chainSoFar = getProvider(base);
       for (TypeLiteral<? extends T> decorator : decorators) {
-        chainSoFar = new DecoratorProvider<T>(targetKey, injectorProvider, chainSoFar, decorator);
+        chainSoFar = new DecoratorProvider<>(targetKey, injectorProvider, chainSoFar, decorator);
       }
       scoper.accept(bind(targetKey).toProvider(chainSoFar));
-    }
-
-    public Module in(Class<? extends Annotation> scopeAnnotation) {
-      scoper = sbb -> sbb.in(scopeAnnotation);
-      return this;
-    }
-
-    public Module in(Scope scope) {
-      scoper = sbb -> sbb.in(scope);
-      return this;
-    }
-
-    public Module asEagerSingleton() {
-      scoper = sbb -> sbb.asEagerSingleton();
-      return this;
     }
   }
 

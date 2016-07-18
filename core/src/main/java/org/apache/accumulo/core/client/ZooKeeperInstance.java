@@ -17,7 +17,6 @@
 package org.apache.accumulo.core.client;
 
 import static com.google.common.base.Preconditions.checkArgument;
-import com.google.inject.Injector;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.util.Collections;
@@ -28,13 +27,11 @@ import java.util.concurrent.TimeUnit;
 import org.apache.accumulo.core.Constants;
 import org.apache.accumulo.core.client.ClientConfiguration.ClientProperty;
 import org.apache.accumulo.core.client.impl.ClientContext;
-import org.apache.accumulo.core.client.impl.ClientModule;
 import org.apache.accumulo.core.client.impl.ConnectorImpl;
 import org.apache.accumulo.core.client.impl.Credentials;
 import org.apache.accumulo.core.client.impl.InstanceOperationsImpl;
 import org.apache.accumulo.core.client.security.tokens.AuthenticationToken;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
-import org.apache.accumulo.core.inject.InjectorBuilder;
 import org.apache.accumulo.core.metadata.RootTable;
 import org.apache.accumulo.core.util.OpTimer;
 import org.apache.accumulo.core.zookeeper.ZooUtil;
@@ -59,7 +56,6 @@ import org.slf4j.LoggerFactory;
 
 public class ZooKeeperInstance implements Instance {
   private static final Logger log = LoggerFactory.getLogger(ZooKeeperInstance.class);
-  private final Injector injector;
 
   private String instanceId = null;
   private String instanceName = null;
@@ -105,8 +101,6 @@ public class ZooKeeperInstance implements Instance {
       throw new IllegalArgumentException("Expected exactly one of instanceName and instanceId to be set");
     this.zooKeepers = clientConf.get(ClientProperty.INSTANCE_ZK_HOST);
     this.zooKeepersSessionTimeOut = (int) AccumuloConfiguration.getTimeInMillis(clientConf.get(ClientProperty.INSTANCE_ZK_TIMEOUT));
-
-    this.injector = InjectorBuilder.newRoot().add(ClientModule.class).bindInstance(ClientConfiguration.class, this.clientConf).build();
 
     zooCache = zcf.getZooCache(zooKeepers, zooKeepersSessionTimeOut);
     if (null != instanceName) {
