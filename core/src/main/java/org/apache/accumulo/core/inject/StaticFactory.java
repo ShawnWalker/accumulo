@@ -20,18 +20,20 @@ import com.google.inject.Injector;
 import com.google.inject.Key;
 import javax.inject.Inject;
 
-/** As a kludge to support porting, provide static access to the injector. */
+/** As a kludge to support porting, provide static access to objects created by the injector. */
 public class StaticFactory {
   @Inject
   private static Injector injector;
-  
+
+  @Deprecated
   public static <T> T getInstance(Key<T> key) {
-    if (injector==null) {
+    if (injector == null) {
       throw new IllegalStateException("Injector not yet initialized");
     }
     return injector.getInstance(key);
   }
-    
+
+  @Deprecated
   public static <T> T getInstance(Class<T> clazz) {
     return getInstance(Key.get(clazz));
   }

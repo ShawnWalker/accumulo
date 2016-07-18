@@ -28,12 +28,14 @@ import junit.framework.TestCase;
 
 import org.apache.accumulo.core.client.IteratorSetting;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
+import org.apache.accumulo.core.conf.ConfigurationModule;
 import org.apache.accumulo.core.data.ByteSequence;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.file.rfile.RFileTest;
 import org.apache.accumulo.core.file.rfile.RFileTest.TestRFile;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 import org.apache.accumulo.core.iterators.DefaultIteratorEnvironment;
 import org.apache.accumulo.core.iterators.IteratorEnvironment;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
@@ -43,6 +45,9 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 
 public class IndexedDocIteratorTest extends TestCase {
+  static {
+    InjectorBuilder.newRoot().add(ConfigurationModule.class).build();
+  }
 
   private static final Logger log = Logger.getLogger(IndexedDocIteratorTest.class);
 

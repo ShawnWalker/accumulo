@@ -19,7 +19,7 @@ package org.apache.accumulo.test.functional;
 import org.apache.accumulo.core.cli.BatchWriterOpts;
 import org.apache.accumulo.core.cli.ScannerOpts;
 import org.apache.accumulo.core.client.Connector;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.accumulo.harness.AccumuloClusterHarness;
 import org.apache.accumulo.test.TestIngest;
 import org.apache.accumulo.test.TestIngest.Opts;
@@ -47,7 +47,7 @@ public class BulkIT extends AccumuloClusterHarness {
 
   @Before
   public void saveConf() {
-    origConf = CachedConfiguration.getInstance();
+    origConf = StaticFactory.getInstance(Configuration.class);
   }
 
   @After

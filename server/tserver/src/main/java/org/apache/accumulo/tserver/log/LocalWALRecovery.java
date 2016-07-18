@@ -57,7 +57,7 @@ public class LocalWALRecovery implements Runnable {
   }
 
   public static void main(String[] args) throws IOException {
-    AccumuloConfiguration configuration = SiteConfiguration.getInstance();
+    AccumuloConfiguration configuration = StaticFactory.getInstance(SiteConfigurationModule.KEY);
 
     LocalWALRecovery main = new LocalWALRecovery(configuration);
     main.parseArgs(args);
@@ -107,7 +107,7 @@ public class LocalWALRecovery implements Runnable {
 
   @Override
   public void run() {
-    SecurityUtil.serverLogin(SiteConfiguration.getInstance());
+    SecurityUtil.serverLogin(StaticFactory.getInstance(SiteConfigurationModule.KEY));
 
     try {
       recoverLocalWriteAheadLogs(VolumeManagerImpl.get().getDefaultVolume().getFileSystem());

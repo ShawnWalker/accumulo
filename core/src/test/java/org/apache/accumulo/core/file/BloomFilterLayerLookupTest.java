@@ -27,6 +27,7 @@ import java.util.Random;
 
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.ConfigurationCopy;
+import org.apache.accumulo.core.conf.ConfigurationModule;
 import org.apache.accumulo.core.conf.Property;
 import org.apache.accumulo.core.data.ByteSequence;
 import org.apache.accumulo.core.data.Key;
@@ -35,10 +36,12 @@ import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.file.keyfunctor.ColumnFamilyFunctor;
 import org.apache.accumulo.core.file.rfile.RFile;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.InjectorBuilder;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.io.Text;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -57,6 +60,11 @@ public class BloomFilterLayerLookupTest {
   @Rule
   public TemporaryFolder tempDir = new TemporaryFolder(new File(System.getProperty("user.dir") + "/target"));
 
+  @BeforeClass
+  public static void initializeStaticFactories() {
+    InjectorBuilder.newRoot().add(ConfigurationModule.class).build();
+  }
+
   @Test
   public void test() throws IOException {
     HashSet<Integer> valsSet = new HashSet<>();
@@ -74,7 +82,7 @@ public class BloomFilterLayerLookupTest {
     acuconf.set(Property.TABLE_BLOOM_LOAD_THRESHOLD, "1");
     acuconf.set(Property.TSERV_BLOOM_LOAD_MAXCONCURRENT, "1");
 
-    Configuration conf = CachedConfiguration.getInstance();
+    Configuration conf = StaticFactory.getInstance(Configuration.class);
     FileSystem fs = FileSystem.get(conf);
 
     // get output file name

@@ -43,8 +43,15 @@ import org.apache.hadoop.io.Text;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableSet;
+import org.apache.accumulo.core.conf.ConfigurationModule;
+import org.apache.accumulo.core.inject.InjectorBuilder;
+import org.junit.BeforeClass;
 
 public class RowFilterTest {
+  @BeforeClass
+  public static void initializeStaticFactories() {
+    InjectorBuilder.newRoot().add(ConfigurationModule.class).build();
+  }
 
   public static class SummingRowFilter extends RowFilter {
 

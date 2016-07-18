@@ -19,9 +19,11 @@ package org.apache.accumulo.core.conf;
 import com.google.inject.AbstractModule;
 import com.google.inject.Key;
 import javax.inject.Singleton;
-import org.apache.hadoop.conf.Configuration;
+import org.apache.accumulo.core.inject.DecoratorModuleBuilder;
+import org.apache.accumulo.core.inject.Requires;
 
-public class ConfigurationModule extends AbstractModule {
+@Requires(ConfigurationModule.class)
+public class SiteConfigurationModule extends AbstractModule {
   /**
    * Equivalent to {@code @Site AccumuloConfiguration}, the bound key for accessing site configuration. This instance of {@link AccumuloConfiguration} loads
    * properties from an XML file, usually accumulo-site.xml.
@@ -33,11 +35,10 @@ public class ConfigurationModule extends AbstractModule {
    * <p>
    * <b>Note</b>: Client code should not use this binding, and it may be deprecated in the future.
    */
-  public static final Key<AccumuloConfiguration> SITE_KEY = Key.get(AccumuloConfiguration.class, Site.class);
+  public static final Key<AccumuloConfiguration> KEY = Key.get(AccumuloConfiguration.class, Site.class);
 
   @Override
   protected void configure() {
-    bind(DefaultConfiguration.class);
-    bind(Configuration.class).in(Singleton.class);
+    install(DecoratorModuleBuilder.of(KEY).buildChain(DefaultConfiguration.class, XmlFileConfiguration.class, SensitiveConfiguration.class).in(Singleton.class));
   }
 }

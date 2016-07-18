@@ -26,6 +26,7 @@ import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.List;
 import java.util.WeakHashMap;
 import java.util.concurrent.atomic.AtomicLong;
@@ -47,7 +48,13 @@ public class LifecycleManagerImpl implements TypeListener, LifecycleManager {
     synchronized (remainingInstances) {
       shutdownItems.addAll(remainingInstances.values());
     }
-    Collections.sort(shutdownItems);
+    Collections.sort(shutdownItems, new Comparator<PredestroyTracker>() {
+      @Override
+      public int compare(PredestroyTracker o1, PredestroyTracker o2) {
+        // Compare in reverse order of creation.
+        return Long.compare(o2.instanceId, o1.instanceId);
+      }
+    });
 
     return shutdownItems.stream().flatMap(sdi -> sdi.destroy()).collect(Collectors.toList());
   }
@@ -113,7 +120,7 @@ public class LifecycleManagerImpl implements TypeListener, LifecycleManager {
   }
 
   /** Information about an instance which we still expect to destroy. */
-  protected static class PredestroyTracker implements Comparable<PredestroyTracker> {
+  protected static class PredestroyTracker {
     private final Collection<Method> pdMethods;
     private final WeakReference<Object> instanceRef;
     private final long instanceId;
@@ -136,12 +143,6 @@ public class LifecycleManagerImpl implements TypeListener, LifecycleManager {
           return Stream.of(ex);
         }
       });
-    }
-
-    @Override
-    public int compareTo(PredestroyTracker o) {
-      // Compare in reverse order of creation.
-      return Long.compare(o.instanceId, this.instanceId);
     }
   }
 

@@ -199,7 +199,7 @@ public class Admin implements KeywordExecutable {
       return;
     }
 
-    AccumuloConfiguration siteConf = SiteConfiguration.getInstance();
+    AccumuloConfiguration siteConf = StaticFactory.getInstance(SiteConfigurationModule.KEY);
     // Login as the server on secure HDFS
     if (siteConf.getBoolean(Property.INSTANCE_RPC_SASL_ENABLED)) {
       SecurityUtil.serverLogin(siteConf);

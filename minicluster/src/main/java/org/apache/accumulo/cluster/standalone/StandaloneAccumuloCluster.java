@@ -33,7 +33,7 @@ import org.apache.accumulo.core.client.Instance;
 import org.apache.accumulo.core.client.ZooKeeperInstance;
 import org.apache.accumulo.core.client.security.tokens.AuthenticationToken;
 import org.apache.accumulo.core.master.thrift.MasterGoalState;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.accumulo.minicluster.ServerType;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -158,7 +158,7 @@ public class StandaloneAccumuloCluster implements AccumuloCluster {
   public Configuration getHadoopConfiguration() {
     String confDir = getHadoopConfDir();
     // Using CachedConfiguration will make repeatedly calling this method much faster
-    final Configuration conf = CachedConfiguration.getInstance();
+    final Configuration conf = StaticFactory.getInstance(Configuration.class);
     conf.addResource(new Path(confDir, "core-site.xml"));
     // Need hdfs-site.xml for NN HA
     conf.addResource(new Path(confDir, "hdfs-site.xml"));

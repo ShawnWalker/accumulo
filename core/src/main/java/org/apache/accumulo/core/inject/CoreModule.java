@@ -22,6 +22,5 @@ import org.apache.accumulo.core.conf.ConfigurationModule;
 @Requires({ConfigurationModule.class})
 public class CoreModule extends AbstractModule {
   @Override
-  protected void configure() {
-  }
+  protected void configure() {}
 }

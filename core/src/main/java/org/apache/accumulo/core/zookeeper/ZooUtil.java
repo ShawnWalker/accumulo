@@ -23,7 +23,7 @@ import java.net.UnknownHostException;
 import org.apache.accumulo.core.Constants;
 import org.apache.accumulo.core.client.Instance;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.accumulo.core.volume.VolumeConfiguration;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileStatus;
@@ -48,7 +48,7 @@ public class ZooUtil extends org.apache.accumulo.fate.zookeeper.ZooUtil {
    * Utility to support certain client side utilities to minimize command-line options.
    */
   public static String getInstanceIDFromHdfs(Path instanceDirectory, AccumuloConfiguration conf) {
-    return getInstanceIDFromHdfs(instanceDirectory, conf, CachedConfiguration.getInstance());
+    return getInstanceIDFromHdfs(instanceDirectory, conf, StaticFactory.getInstance(Configuration.class));
   }
 
   public static String getInstanceIDFromHdfs(Path instanceDirectory, AccumuloConfiguration conf, Configuration hadoopConf) {

@@ -21,7 +21,7 @@ import static java.util.Objects.requireNonNull;
 import java.io.IOException;
 import java.util.Objects;
 
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -74,7 +74,7 @@ public class VolumeImpl implements Volume {
 
     FileSystem other;
     try {
-      other = p.getFileSystem(CachedConfiguration.getInstance());
+      other = p.getFileSystem(StaticFactory.getInstance(Configuration.class));
     } catch (IOException e) {
       log.warn("Could not determine filesystem from path: " + p);
       return false;

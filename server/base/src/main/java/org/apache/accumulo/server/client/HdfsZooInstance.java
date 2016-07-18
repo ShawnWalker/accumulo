@@ -36,7 +36,6 @@ import org.apache.accumulo.core.client.impl.InstanceOperationsImpl;
 import org.apache.accumulo.core.client.security.tokens.AuthenticationToken;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.Property;
-import org.apache.accumulo.core.conf.SiteConfiguration;
 import org.apache.accumulo.core.metadata.RootTable;
 import org.apache.accumulo.core.util.OpTimer;
 import org.apache.accumulo.core.zookeeper.ZooUtil;
@@ -51,6 +50,8 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Joiner;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
+import org.apache.accumulo.core.inject.StaticFactory;
 
 /**
  * An implementation of Instance that looks in HDFS and ZooKeeper to find the master and root tablet location.
@@ -59,7 +60,7 @@ import com.google.common.base.Joiner;
 public class HdfsZooInstance implements Instance {
 
   private HdfsZooInstance() {
-    AccumuloConfiguration acuConf = SiteConfiguration.getInstance();
+    AccumuloConfiguration acuConf = StaticFactory.getInstance(SiteConfigurationModule.KEY);
     zooCache = new ZooCacheFactory().getZooCache(acuConf.get(Property.INSTANCE_ZK_HOST), (int) acuConf.getTimeInMillis(Property.INSTANCE_ZK_TIMEOUT));
   }
 
@@ -137,7 +138,7 @@ public class HdfsZooInstance implements Instance {
 
   private static synchronized void _getInstanceID() {
     if (instanceId == null) {
-      AccumuloConfiguration acuConf = SiteConfiguration.getInstance();
+      AccumuloConfiguration acuConf = StaticFactory.getInstance(SiteConfigurationModule.KEY);
       // InstanceID should be the same across all volumes, so just choose one
       VolumeManager fs;
       try {
@@ -159,17 +160,17 @@ public class HdfsZooInstance implements Instance {
 
   @Override
   public String getZooKeepers() {
-    return SiteConfiguration.getInstance().get(Property.INSTANCE_ZK_HOST);
+    return StaticFactory.getInstance(SiteConfigurationModule.KEY).get(Property.INSTANCE_ZK_HOST);
   }
 
   @Override
   public int getZooKeepersSessionTimeOut() {
-    return (int) SiteConfiguration.getInstance().getTimeInMillis(Property.INSTANCE_ZK_TIMEOUT);
+    return (int) StaticFactory.getInstance(SiteConfigurationModule.KEY).getTimeInMillis(Property.INSTANCE_ZK_TIMEOUT);
   }
 
   @Override
   public Connector getConnector(String principal, AuthenticationToken token) throws AccumuloException, AccumuloSecurityException {
-    return new ConnectorImpl(new ClientContext(this, new Credentials(principal, token), SiteConfiguration.getInstance()));
+    return new ConnectorImpl(new ClientContext(this, new Credentials(principal, token), StaticFactory.getInstance(SiteConfigurationModule.KEY)));
   }
 
   public static void main(String[] args) {

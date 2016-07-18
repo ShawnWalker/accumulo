@@ -26,7 +26,7 @@ import org.apache.accumulo.core.client.TableExistsException;
 import org.apache.accumulo.core.client.admin.TableOperations;
 import org.apache.accumulo.core.iterators.LongCombiner;
 import org.apache.accumulo.core.iterators.user.SummingCombiner;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.accumulo.core.util.SimpleThreadPool;
 import org.apache.accumulo.test.randomwalk.Environment;
 import org.apache.accumulo.test.randomwalk.State;
@@ -59,7 +59,7 @@ public class Setup extends Test {
       // expected if there are multiple walkers
     }
     state.set("rand", rand);
-    state.set("fs", FileSystem.get(CachedConfiguration.getInstance()));
+    state.set("fs", FileSystem.get(StaticFactory.getInstance(Configuration.class)));
     state.set("bulkImportSuccess", "true");
     BulkPlusOne.counter.set(0l);
 

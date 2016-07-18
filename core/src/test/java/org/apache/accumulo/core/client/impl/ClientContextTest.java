@@ -23,8 +23,10 @@ import java.util.Map;
 
 import org.apache.accumulo.core.client.ClientConfiguration;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
+import org.apache.accumulo.core.conf.ConfigurationModule;
 import org.apache.accumulo.core.conf.CredentialProviderFactoryShim;
 import org.apache.accumulo.core.conf.Property;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -57,6 +59,11 @@ public class ClientContextTest {
 
   protected String getKeyStoreUrl(File absoluteFilePath) {
     return "jceks://file" + absoluteFilePath.getAbsolutePath();
+  }
+
+  @BeforeClass
+  public static void initializeStaticFactories() {
+    InjectorBuilder.newRoot().add(ConfigurationModule.class).build();
   }
 
   @Test

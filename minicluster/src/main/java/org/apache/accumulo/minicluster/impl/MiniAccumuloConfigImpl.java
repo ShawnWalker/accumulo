@@ -194,7 +194,7 @@ public class MiniAccumuloConfigImpl {
 
     File keystoreFile = new File(getConfDir(), "credential-provider.jks");
     String keystoreUri = "jceks://file" + keystoreFile.getAbsolutePath();
-    Configuration conf = CredentialProviderFactoryShim.getConfiguration(keystoreUri);
+    Configuration conf = CredentialProviderFactoryShim.getConfiguration(new Configuration(), keystoreUri);
 
     // Set the URI on the siteCfg
     siteConfig.put(Property.GENERAL_SECURITY_CREDENTIAL_PROVIDER_PATHS.getKey(), keystoreUri);

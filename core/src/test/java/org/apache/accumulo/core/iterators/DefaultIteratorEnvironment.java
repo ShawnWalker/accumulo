@@ -23,7 +23,7 @@ import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.iterators.system.MapFileIterator;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 
@@ -41,7 +41,7 @@ public class DefaultIteratorEnvironment extends BaseIteratorEnvironment {
 
   @Override
   public SortedKeyValueIterator<Key,Value> reserveMapFileReader(String mapFileName) throws IOException {
-    Configuration conf = CachedConfiguration.getInstance();
+    Configuration conf = StaticFactory.getInstance(Configuration.class);
     FileSystem fs = FileSystem.get(conf);
     return new MapFileIterator(this.conf, fs, mapFileName, conf);
   }

@@ -30,10 +30,12 @@ import java.util.List;
 import java.util.TreeMap;
 
 import org.apache.accumulo.core.client.IteratorSetting;
+import org.apache.accumulo.core.conf.ConfigurationModule;
 import org.apache.accumulo.core.data.ByteSequence;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 import org.apache.accumulo.core.iterators.Combiner;
 import org.apache.accumulo.core.iterators.Combiner.ValueIterator;
 import org.apache.accumulo.core.iterators.CombinerTestUtil;
@@ -57,6 +59,9 @@ import org.junit.Assert;
 import org.junit.Test;
 
 public class CombinerTest {
+  static {
+    InjectorBuilder.newRoot().add(ConfigurationModule.class).build();
+  }
 
   private static final Collection<ByteSequence> EMPTY_COL_FAMS = new ArrayList<>();
 

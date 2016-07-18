@@ -20,10 +20,10 @@ import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Map.Entry;
 import java.util.Set;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
 
-import org.apache.accumulo.core.conf.DefaultConfiguration;
-import org.apache.accumulo.core.conf.SiteConfiguration;
 import org.apache.accumulo.core.file.rfile.bcfile.BCFile.MetaIndexEntry;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FileSystem;
@@ -34,7 +34,7 @@ public class PrintInfo {
     FSDataInputStream fsin = fs.open(path);
     BCFile.Reader bcfr = null;
     try {
-      bcfr = new BCFile.Reader(fsin, fs.getFileStatus(path).getLen(), conf, SiteConfiguration.getInstance());
+      bcfr = new BCFile.Reader(fsin, fs.getFileStatus(path).getLen(), conf, StaticFactory.getInstance(SiteConfigurationModule.KEY));
 
       Set<Entry<String,MetaIndexEntry>> es = bcfr.metaIndex.index.entrySet();
 

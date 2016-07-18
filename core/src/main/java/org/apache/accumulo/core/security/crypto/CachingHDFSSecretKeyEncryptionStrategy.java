@@ -29,8 +29,9 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.accumulo.core.conf.Property;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.commons.io.IOUtils;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
@@ -131,7 +132,7 @@ public class CachingHDFSSecretKeyEncryptionStrategy implements SecretKeyEncrypti
 
       // TODO ACCUMULO-2530 Ensure volumes a properly supported
       Path pathToKey = new Path(pathToKeyName);
-      FileSystem fs = FileSystem.get(CachedConfiguration.getInstance());
+      FileSystem fs = FileSystem.get(StaticFactory.getInstance(Configuration.class));
 
       DataInputStream in = null;
       try {

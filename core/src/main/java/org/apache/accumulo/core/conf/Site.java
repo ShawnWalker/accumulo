@@ -16,13 +16,14 @@
  */
 package org.apache.accumulo.core.conf;
 
-import java.util.Map;
-import java.util.function.Predicate;
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Retention;
+import java.lang.annotation.RetentionPolicy;
+import java.lang.annotation.Target;
+import javax.inject.Qualifier;
 
-public interface ConfigurationSource {
-  /** Return a value for the specified property. */
-  public String get(Property property);
-  
-  /** Build a map of all properties matching the specified filter. */
-  public void getProperties(Map<String, String> props, Predicate<String> filter);
-}
+/** Qualifier for objects related to site-wide configuration. */
+@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.PARAMETER, ElementType.METHOD})
+@Qualifier
+public @interface Site {}

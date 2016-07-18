@@ -27,6 +27,8 @@ import java.util.Iterator;
 import java.util.Map.Entry;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import org.apache.accumulo.core.inject.InjectorBuilder;
+import org.junit.BeforeClass;
 
 import org.junit.Test;
 
@@ -34,6 +36,11 @@ import org.junit.Test;
  * Test the Property class
  */
 public class PropertyTest {
+  @BeforeClass
+  public static void initializeStaticFactories() {
+    InjectorBuilder.newRoot().add(ConfigurationModule.class).build();
+  }
+
   @Test
   public void testProperties() {
     HashSet<String> validPrefixes = new HashSet<>();

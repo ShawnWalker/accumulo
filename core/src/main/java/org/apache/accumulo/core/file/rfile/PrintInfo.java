@@ -22,8 +22,6 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import org.apache.accumulo.core.cli.Help;
-import org.apache.accumulo.core.conf.DefaultConfiguration;
-import org.apache.accumulo.core.conf.SiteConfiguration;
 import org.apache.accumulo.core.data.ByteSequence;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
@@ -41,10 +39,12 @@ import org.slf4j.LoggerFactory;
 
 import com.beust.jcommander.Parameter;
 import com.google.auto.service.AutoService;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
+import org.apache.accumulo.core.inject.InjectorBuilder;
+import org.apache.accumulo.core.inject.StaticFactory;
 
 @AutoService(KeywordExecutable.class)
 public class PrintInfo implements KeywordExecutable {
-
   private static final Logger log = LoggerFactory.getLogger(PrintInfo.class);
 
   static class Opts extends Help {
@@ -115,6 +115,8 @@ public class PrintInfo implements KeywordExecutable {
 
   @Override
   public void execute(final String[] args) throws Exception {
+    InjectorBuilder.newRoot().add(SiteConfigurationModule.class).build();
+
     Opts opts = new Opts();
     opts.parseArgs(PrintInfo.class.getName(), args);
     if (opts.files.isEmpty()) {
@@ -147,8 +149,7 @@ public class PrintInfo implements KeywordExecutable {
       }
       System.out.println("Reading file: " + path.makeQualified(fs.getUri(), fs.getWorkingDirectory()).toString());
 
-      CachableBlockFile.Reader _rdr = new CachableBlockFile.Reader(fs, path, conf, null, null,
-          SiteConfiguration.getInstance());
+      CachableBlockFile.Reader _rdr = new CachableBlockFile.Reader(fs, path, conf, null, null, StaticFactory.getInstance(SiteConfigurationModule.KEY));
       Reader iter = new RFile.Reader(_rdr);
       MetricsGatherer<Map<String,ArrayList<VisibilityMetric>>> vmg = new VisMetricsGatherer();
 

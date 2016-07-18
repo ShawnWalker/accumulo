@@ -26,10 +26,12 @@ import java.util.Random;
 import java.util.TreeMap;
 
 import org.apache.accumulo.core.client.IteratorSetting;
+import org.apache.accumulo.core.conf.ConfigurationModule;
 import org.apache.accumulo.core.data.ByteSequence;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 import org.apache.accumulo.core.iterators.DefaultIteratorEnvironment;
 import org.apache.accumulo.core.iterators.IteratorEnvironment;
 import org.apache.accumulo.core.iterators.SortedKeyValueIterator;
@@ -41,7 +43,9 @@ import org.junit.Test;
 import org.junit.rules.TestName;
 
 public class IntersectingIteratorTest {
-
+  static {
+    InjectorBuilder.newRoot().add(ConfigurationModule.class).build();
+  }
   private static final Collection<ByteSequence> EMPTY_COL_FAMS = new ArrayList<>();
   private static IteratorEnvironment env = new DefaultIteratorEnvironment();
 

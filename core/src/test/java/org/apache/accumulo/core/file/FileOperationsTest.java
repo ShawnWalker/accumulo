@@ -23,13 +23,21 @@ import java.io.File;
 import java.io.IOException;
 
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
+import org.apache.accumulo.core.conf.ConfigurationModule;
 import org.apache.accumulo.core.file.rfile.RFile;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 import org.apache.commons.io.FileUtils;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class FileOperationsTest {
+
+  @BeforeClass
+  public static void initializeStaticFactories() {
+    InjectorBuilder.newRoot().add(ConfigurationModule.class).build();
+  }
 
   public FileOperationsTest() {}
 

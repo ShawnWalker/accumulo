@@ -347,7 +347,7 @@ public class TraceServer implements Watcher {
   }
 
   public static void main(String[] args) throws Exception {
-    loginTracer(SiteConfiguration.getInstance());
+    loginTracer(StaticFactory.getInstance(SiteConfigurationModule.KEY));
     ServerOpts opts = new ServerOpts();
     final String app = "tracer";
     opts.parseArgs(app, args);

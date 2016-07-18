@@ -69,7 +69,7 @@ import org.apache.accumulo.core.metadata.schema.MetadataSchema.TabletsSection;
 import org.apache.accumulo.core.sample.impl.SamplerConfigurationImpl;
 import org.apache.accumulo.core.sample.impl.SamplerFactory;
 import org.apache.accumulo.core.security.crypto.CryptoTest;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FSDataInputStream;
 import org.apache.hadoop.fs.FSDataOutputStream;
@@ -88,8 +88,13 @@ import com.google.common.hash.HashCode;
 import com.google.common.hash.Hasher;
 import com.google.common.hash.Hashing;
 import com.google.common.primitives.Bytes;
+import org.apache.accumulo.core.conf.ConfigurationModule;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 
 public class RFileTest {
+  static {
+    InjectorBuilder.newRoot().add(ConfigurationModule.class).build();
+  }
 
   public static class SampleIE extends BaseIteratorEnvironment {
 
@@ -203,7 +208,7 @@ public class RFileTest {
 
   public static class TestRFile {
 
-    protected Configuration conf = CachedConfiguration.getInstance();
+    protected Configuration conf = StaticFactory.getInstance(Configuration.class);
     public RFile.Writer writer;
     protected ByteArrayOutputStream baos;
     protected FSDataOutputStream dos;
@@ -1625,7 +1630,7 @@ public class RFileTest {
     SeekableByteArrayInputStream bais = new SeekableByteArrayInputStream(data);
     FSDataInputStream in2 = new FSDataInputStream(bais);
     AccumuloConfiguration aconf = AccumuloConfiguration.getDefaultConfiguration();
-    CachableBlockFile.Reader _cbr = new CachableBlockFile.Reader(in2, data.length, CachedConfiguration.getInstance(), aconf);
+    CachableBlockFile.Reader _cbr = new CachableBlockFile.Reader(in2, data.length, StaticFactory.getInstance(Configuration.class), aconf);
     Reader reader = new RFile.Reader(_cbr);
     checkIndex(reader);
 

@@ -32,11 +32,10 @@ import java.util.Optional;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.DefaultConfiguration;
 import org.apache.accumulo.core.conf.Property;
-import org.apache.accumulo.core.conf.SiteConfiguration;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.impl.KeyExtent;
 import org.apache.accumulo.core.file.rfile.RFile;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.accumulo.core.volume.NonConfiguredVolume;
 import org.apache.accumulo.core.volume.Volume;
 import org.apache.accumulo.core.volume.VolumeConfiguration;
@@ -60,6 +59,7 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.HashMultimap;
 import com.google.common.collect.Multimap;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
 
 public class VolumeManagerImpl implements VolumeManager {
 
@@ -91,7 +91,7 @@ public class VolumeManagerImpl implements VolumeManager {
 
   public static org.apache.accumulo.server.fs.VolumeManager getLocal(String localBasePath) throws IOException {
     AccumuloConfiguration accConf = DefaultConfiguration.getDefaultConfiguration();
-    Volume defaultLocalVolume = VolumeConfiguration.create(FileSystem.getLocal(CachedConfiguration.getInstance()), localBasePath);
+    Volume defaultLocalVolume = VolumeConfiguration.create(FileSystem.getLocal(StaticFactory.getInstance(Configuration.class)), localBasePath);
 
     // The default volume gets placed in the map, but local filesystem is only used for testing purposes
     return new VolumeManagerImpl(Collections.singletonMap(DEFAULT, defaultLocalVolume), defaultLocalVolume, accConf);
@@ -237,7 +237,7 @@ public class VolumeManagerImpl implements VolumeManager {
   public Volume getVolumeByPath(Path path) {
     if (path.toString().contains(":")) {
       try {
-        FileSystem desiredFs = path.getFileSystem(CachedConfiguration.getInstance());
+        FileSystem desiredFs = path.getFileSystem(StaticFactory.getInstance(Configuration.class));
         URI desiredFsUri = desiredFs.getUri();
         Collection<Volume> candidateVolumes = volumesByFileSystemUri.get(desiredFsUri);
         if (null != candidateVolumes) {
@@ -315,14 +315,14 @@ public class VolumeManagerImpl implements VolumeManager {
   }
 
   public static VolumeManager get() throws IOException {
-    AccumuloConfiguration conf = SiteConfiguration.getInstance();
+    AccumuloConfiguration conf = StaticFactory.getInstance(SiteConfigurationModule.KEY);
     return get(conf);
   }
 
   static private final String DEFAULT = "";
 
   public static VolumeManager get(AccumuloConfiguration conf) throws IOException {
-    return get(conf, CachedConfiguration.getInstance());
+    return get(conf, StaticFactory.getInstance(Configuration.class));
   }
 
   public static VolumeManager get(AccumuloConfiguration conf, final Configuration hadoopConf) throws IOException {
@@ -381,8 +381,8 @@ public class VolumeManagerImpl implements VolumeManager {
   @Override
   public Path matchingFileSystem(Path source, String[] options) {
     try {
-      if (ViewFSUtils.isViewFS(source, CachedConfiguration.getInstance())) {
-        return ViewFSUtils.matchingFileSystem(source, options, CachedConfiguration.getInstance());
+      if (ViewFSUtils.isViewFS(source, StaticFactory.getInstance(Configuration.class))) {
+        return ViewFSUtils.matchingFileSystem(source, options, StaticFactory.getInstance(Configuration.class));
       }
     } catch (IOException e) {
       throw new RuntimeException(e);

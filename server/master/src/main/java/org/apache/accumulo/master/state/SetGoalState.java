@@ -16,10 +16,12 @@
  */
 package org.apache.accumulo.master.state;
 
+import com.google.inject.Injector;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import org.apache.accumulo.core.Constants;
-import org.apache.accumulo.core.conf.SiteConfiguration;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 import org.apache.accumulo.core.master.thrift.MasterGoalState;
 import org.apache.accumulo.core.zookeeper.ZooUtil;
 import org.apache.accumulo.fate.zookeeper.ZooUtil.NodeExistsPolicy;
@@ -40,7 +42,8 @@ public class SetGoalState {
       System.err.println("Usage: accumulo " + SetGoalState.class.getName() + " [NORMAL|SAFE_MODE|CLEAN_STOP]");
       System.exit(-1);
     }
-    SecurityUtil.serverLogin(SiteConfiguration.getInstance());
+    Injector injector=InjectorBuilder.newRoot().add(SiteConfigurationModule.class).build();
+    SecurityUtil.serverLogin(injector.getInstance(SiteConfigurationModule.KEY));
 
     VolumeManager fs = VolumeManagerImpl.get();
     Accumulo.waitForZookeeperAndHdfs(fs);

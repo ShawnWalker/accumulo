@@ -223,7 +223,7 @@ public class FateCommand extends Command {
   protected synchronized IZooReaderWriter getZooReaderWriter(Instance instance, String secret) {
 
     if (secret == null) {
-      AccumuloConfiguration conf = SiteConfiguration.getInstance();
+      AccumuloConfiguration conf = StaticFactory.getInstance(SiteConfigurationModule.KEY);
       secret = conf.get(Property.INSTANCE_SECRET);
     }
 

@@ -16,12 +16,18 @@
  */
 package org.apache.accumulo.core.conf;
 
+import org.apache.accumulo.core.inject.InjectorBuilder;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
+import org.junit.BeforeClass;
 
 import org.junit.Test;
 
 public class AccumuloConfigurationTest {
+  @BeforeClass
+  public static void initializeStaticFactories() {
+    InjectorBuilder.newRoot().add(ConfigurationModule.class).build();
+  }
 
   @Test
   public void testGetMemoryInBytes() throws Exception {

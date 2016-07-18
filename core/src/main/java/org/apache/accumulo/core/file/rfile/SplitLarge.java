@@ -30,7 +30,7 @@ import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.file.blockfile.impl.CachableBlockFile;
 import org.apache.accumulo.core.file.rfile.RFile.Reader;
 import org.apache.accumulo.core.file.rfile.RFile.Writer;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -51,7 +51,7 @@ public class SplitLarge {
   }
 
   public static void main(String[] args) throws Exception {
-    Configuration conf = CachedConfiguration.getInstance();
+    Configuration conf = StaticFactory.getInstance(Configuration.class);
     FileSystem fs = FileSystem.get(conf);
     Opts opts = new Opts();
     opts.parseArgs(SplitLarge.class.getName(), args);

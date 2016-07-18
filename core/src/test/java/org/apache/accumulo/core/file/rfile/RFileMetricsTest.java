@@ -39,11 +39,18 @@ import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 
 import com.google.common.util.concurrent.AtomicLongMap;
+import org.apache.accumulo.core.conf.ConfigurationModule;
+import org.apache.accumulo.core.inject.InjectorBuilder;
+import org.junit.BeforeClass;
 
 /**
  *
  */
 public class RFileMetricsTest {
+  @BeforeClass
+  public static void initializeStaticFactories() {
+    InjectorBuilder.newRoot().add(ConfigurationModule.class).build();
+  }
 
   @Rule
   public TemporaryFolder tempFolder = new TemporaryFolder(new File(System.getProperty("user.dir") + "/target"));

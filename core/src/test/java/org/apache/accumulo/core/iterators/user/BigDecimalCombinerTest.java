@@ -30,14 +30,17 @@ import java.util.TreeMap;
 
 import org.apache.accumulo.core.client.IteratorSetting;
 import org.apache.accumulo.core.client.IteratorSetting.Column;
+import org.apache.accumulo.core.conf.ConfigurationModule;
 import org.apache.accumulo.core.data.ByteSequence;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 import org.apache.accumulo.core.iterators.Combiner;
 import org.apache.accumulo.core.iterators.SortedMapIterator;
 import org.apache.accumulo.core.iterators.TypedValueCombiner.Encoder;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class BigDecimalCombinerTest {
@@ -49,6 +52,11 @@ public class BigDecimalCombinerTest {
   TreeMap<Key,Value> tm1;
   List<Column> columns;
   Combiner ai;
+
+  @BeforeClass
+  public static void initializeStaticFactories() {
+    InjectorBuilder.newRoot().add(ConfigurationModule.class).build();
+  }
 
   @Before
   public void setup() {

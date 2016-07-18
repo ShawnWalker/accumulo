@@ -16,14 +16,18 @@
  */
 package org.apache.accumulo.core.conf;
 
+import com.google.inject.Injector;
 import java.io.File;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Predicate;
+import javax.inject.Inject;
+import javax.inject.Singleton;
+import org.apache.accumulo.core.inject.Decoratee;
+import org.apache.accumulo.core.inject.DecoratorModuleBuilder;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 
-import org.apache.hadoop.conf.Configuration;
-import org.easymock.EasyMock;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -41,28 +45,58 @@ public class SiteConfigurationTest {
     }
   }
 
+  private static class FakeFileConfig extends AccumuloConfiguration {
+    private final String cpp;
+
+    @Inject
+    @Decoratee
+    private AccumuloConfiguration chainNext;
+
+    FakeFileConfig() {
+      // site-cfg.jceks={'ignored.property'=>'ignored', 'instance.secret'=>'mysecret', 'general.rpc.timeout'=>'timeout'}
+      URL keystore = SiteConfigurationTest.class.getResource("/site-cfg.jceks");
+      Assert.assertNotNull(keystore);
+      String keystorePath = new File(keystore.getFile()).getAbsolutePath();
+      this.cpp = "jceks://file" + keystorePath;
+    }
+
+    @Override
+    public String get(Property property) {
+      if (property.equals(Property.GENERAL_SECURITY_CREDENTIAL_PROVIDER_PATHS)) {
+        return cpp;
+      } else if (property.equals(Property.INSTANCE_SECRET)) {
+        return "ignored";
+      } else {
+        return chainNext.get(property);
+      }
+    }
+
+    @Override
+    public void getProperties(Map<String,String> props, Predicate<String> filter) {
+      chainNext.getProperties(props, filter);
+      if (filter.test(Property.GENERAL_SECURITY_CREDENTIAL_PROVIDER_PATHS.getKey())) {
+        props.put(Property.GENERAL_SECURITY_CREDENTIAL_PROVIDER_PATHS.getKey(), cpp);
+      }
+      if (filter.test(Property.INSTANCE_SECRET.getKey())) {
+        props.put(Property.INSTANCE_SECRET.getKey(), "ignored");
+      }
+    }
+  }
+
   @Test
   public void testOnlySensitivePropertiesExtractedFromCredetialProvider() throws SecurityException, NoSuchMethodException {
     if (!isCredentialProviderAvailable) {
       return;
     }
 
-    SiteConfiguration siteCfg = EasyMock.createMockBuilder(SiteConfiguration.class).addMockedMethod("getHadoopConfiguration")
-        .withConstructor(AccumuloConfiguration.class).withArgs(DefaultConfiguration.getInstance()).createMock();
+    Injector inj = InjectorBuilder
+        .newRoot()
+        .add(ConfigurationModule.class)
+        .addRaw(
+            DecoratorModuleBuilder.of(AccumuloConfiguration.class).buildChain(DefaultConfiguration.class, FakeFileConfig.class, SensitiveConfiguration.class)
+                .in(Singleton.class)).build();
 
-    siteCfg.set(Property.INSTANCE_SECRET, "ignored");
-
-    // site-cfg.jceks={'ignored.property'=>'ignored', 'instance.secret'=>'mysecret', 'general.rpc.timeout'=>'timeout'}
-    URL keystore = SiteConfigurationTest.class.getResource("/site-cfg.jceks");
-    Assert.assertNotNull(keystore);
-    String keystorePath = new File(keystore.getFile()).getAbsolutePath();
-
-    Configuration hadoopConf = new Configuration();
-    hadoopConf.set(CredentialProviderFactoryShim.CREDENTIAL_PROVIDER_PATH, "jceks://file" + keystorePath);
-
-    EasyMock.expect(siteCfg.getHadoopConfiguration()).andReturn(hadoopConf).once();
-
-    EasyMock.replay(siteCfg);
+    AccumuloConfiguration siteCfg = inj.getInstance(AccumuloConfiguration.class);
 
     Map<String,String> props = new HashMap<>();
     Predicate<String> all = x -> true;
@@ -72,5 +106,4 @@ public class SiteConfigurationTest {
     Assert.assertEquals(null, props.get("ignored.property"));
     Assert.assertEquals(Property.GENERAL_RPC_TIMEOUT.getDefaultValue(), props.get(Property.GENERAL_RPC_TIMEOUT.getKey()));
   }
-
 }

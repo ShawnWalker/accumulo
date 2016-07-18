@@ -104,7 +104,6 @@ import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.core.tabletserver.thrift.NotServingTabletException;
 import org.apache.accumulo.core.tabletserver.thrift.TabletClientService;
 import org.apache.accumulo.core.trace.Tracer;
-import org.apache.accumulo.core.conf.CachedConfiguration;
 import org.apache.accumulo.core.util.LocalityGroupUtil;
 import org.apache.accumulo.core.util.MapCounter;
 import org.apache.accumulo.core.util.NamingThreadFactory;
@@ -125,6 +124,8 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.base.Joiner;
 import com.google.common.net.HostAndPort;
+import org.apache.accumulo.core.inject.StaticFactory;
+import org.apache.hadoop.conf.Configuration;
 
 public class TableOperationsImpl extends TableOperationsHelper {
 
@@ -988,7 +989,7 @@ public class TableOperationsImpl extends TableOperationsHelper {
     Map<String,String> props = context.getConnector().instanceOperations().getSystemConfiguration();
     AccumuloConfiguration conf = new ConfigurationCopy(props);
 
-    FileSystem fs = VolumeConfiguration.getVolume(dir, CachedConfiguration.getInstance(), conf).getFileSystem();
+    FileSystem fs = VolumeConfiguration.getVolume(dir, StaticFactory.getInstance(Configuration.class), conf).getFileSystem();
 
     if (dir.contains(":")) {
       ret = new Path(dir);
@@ -1319,7 +1320,7 @@ public class TableOperationsImpl extends TableOperationsHelper {
     }
 
     try {
-      FileSystem fs = new Path(importDir).getFileSystem(CachedConfiguration.getInstance());
+      FileSystem fs = new Path(importDir).getFileSystem(StaticFactory.getInstance(Configuration.class));
       Map<String,String> props = getExportedProps(fs, new Path(importDir, Constants.EXPORT_FILE));
 
       for (Entry<String,String> entry : props.entrySet()) {

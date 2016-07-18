@@ -88,21 +88,21 @@ public class SecurityOperation {
   }
 
   protected static Authorizor getAuthorizor(String instanceId, boolean initialize) {
-    Authorizor toRet = SiteConfiguration.getInstance().instantiateClassProperty(Property.INSTANCE_SECURITY_AUTHORIZOR, Authorizor.class,
+    Authorizor toRet = StaticFactory.getInstance(SiteConfigurationModule.KEY).instantiateClassProperty(Property.INSTANCE_SECURITY_AUTHORIZOR, Authorizor.class,
         ZKAuthorizor.getInstance());
     toRet.initialize(instanceId, initialize);
     return toRet;
   }
 
   protected static Authenticator getAuthenticator(String instanceId, boolean initialize) {
-    Authenticator toRet = SiteConfiguration.getInstance().instantiateClassProperty(Property.INSTANCE_SECURITY_AUTHENTICATOR, Authenticator.class,
+    Authenticator toRet = StaticFactory.getInstance(SiteConfigurationModule.KEY).instantiateClassProperty(Property.INSTANCE_SECURITY_AUTHENTICATOR, Authenticator.class,
         ZKAuthenticator.getInstance());
     toRet.initialize(instanceId, initialize);
     return toRet;
   }
 
   protected static PermissionHandler getPermHandler(String instanceId, boolean initialize) {
-    PermissionHandler toRet = SiteConfiguration.getInstance().instantiateClassProperty(Property.INSTANCE_SECURITY_PERMISSION_HANDLER, PermissionHandler.class,
+    PermissionHandler toRet = StaticFactory.getInstance(SiteConfigurationModule.KEY).instantiateClassProperty(Property.INSTANCE_SECURITY_PERMISSION_HANDLER, PermissionHandler.class,
         ZKPermHandler.getInstance());
     toRet.initialize(instanceId, initialize);
     return toRet;

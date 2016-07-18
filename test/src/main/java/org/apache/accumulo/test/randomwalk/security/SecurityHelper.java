@@ -25,7 +25,7 @@ import org.apache.accumulo.core.client.Connector;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.core.security.SystemPermission;
 import org.apache.accumulo.core.security.TablePermission;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.accumulo.test.randomwalk.State;
 import org.apache.hadoop.fs.FileSystem;
 import org.slf4j.Logger;
@@ -194,7 +194,7 @@ public class SecurityHelper {
 
     if (fs == null) {
       try {
-        fs = FileSystem.get(CachedConfiguration.getInstance());
+        fs = FileSystem.get(StaticFactory.getInstance(Configuration.class));
       } catch (IOException e) {
         throw new RuntimeException(e);
       }

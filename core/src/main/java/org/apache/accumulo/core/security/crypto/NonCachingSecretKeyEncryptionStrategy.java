@@ -30,7 +30,8 @@ import javax.crypto.IllegalBlockSizeException;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.apache.accumulo.core.conf.Property;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
@@ -157,7 +158,7 @@ public class NonCachingSecretKeyEncryptionStrategy implements SecretKeyEncryptio
 
     try {
       // TODO ACCUMULO-2530 Ensure volumes a properly supported
-      FileSystem fs = FileSystem.get(CachedConfiguration.getInstance());
+      FileSystem fs = FileSystem.get(StaticFactory.getInstance(Configuration.class));
       doKeyEncryptionOperation(Cipher.WRAP_MODE, params, fullPath, pathToKey, fs);
 
     } catch (IOException e) {
@@ -180,7 +181,7 @@ public class NonCachingSecretKeyEncryptionStrategy implements SecretKeyEncryptio
 
     try {
       // TODO ACCUMULO-2530 Ensure volumes a properly supported
-      FileSystem fs = FileSystem.get(CachedConfiguration.getInstance());
+      FileSystem fs = FileSystem.get(StaticFactory.getInstance(Configuration.class));
       doKeyEncryptionOperation(Cipher.UNWRAP_MODE, params, pathToKeyName, pathToKey, fs);
 
     } catch (IOException e) {

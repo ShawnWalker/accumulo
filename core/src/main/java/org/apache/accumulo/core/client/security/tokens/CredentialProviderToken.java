@@ -24,7 +24,7 @@ import java.util.LinkedHashSet;
 import java.util.Set;
 
 import org.apache.accumulo.core.conf.CredentialProviderFactoryShim;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.hadoop.conf.Configuration;
 
 /**
@@ -45,7 +45,7 @@ public class CredentialProviderToken extends PasswordToken {
   }
 
   protected void setWithCredentialProviders(String name, String credentialProviders) throws IOException {
-    final Configuration conf = new Configuration(CachedConfiguration.getInstance());
+    final Configuration conf = StaticFactory.getInstance(Configuration.class);
     conf.set(CredentialProviderFactoryShim.CREDENTIAL_PROVIDER_PATH, credentialProviders);
 
     char[] password = CredentialProviderFactoryShim.getValueFromCredentialProvider(conf, name);

@@ -103,7 +103,7 @@ public class LogReader {
         // read log entries from a simple hdfs file
         DFSLoggerInputStreams streams;
         try {
-          streams = DfsLogger.readHeaderAndReturnStream(fs, path, SiteConfiguration.getInstance());
+          streams = DfsLogger.readHeaderAndReturnStream(fs, path, StaticFactory.getInstance(SiteConfigurationModule.KEY));
         } catch (LogHeaderIncompleteException e) {
           log.warn("Could not read header for " + path + ". Ignoring...");
           continue;

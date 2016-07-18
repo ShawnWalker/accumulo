@@ -31,7 +31,7 @@ import org.apache.accumulo.core.client.mapreduce.AccumuloInputFormat;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Range;
 import org.apache.accumulo.core.data.Value;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.accumulo.test.continuous.ContinuousWalk.BadChecksumException;
 import org.apache.hadoop.conf.Configured;
 import org.apache.hadoop.fs.Path;
@@ -219,7 +219,7 @@ public class ContinuousVerify extends Configured implements Tool {
    *          instanceName zookeepers username password table columns outputpath
    */
   public static void main(String[] args) throws Exception {
-    int res = ToolRunner.run(CachedConfiguration.getInstance(), new ContinuousVerify(), args);
+    int res = ToolRunner.run(StaticFactory.getInstance(Configuration.class), new ContinuousVerify(), args);
     if (res != 0)
       System.exit(res);
   }

@@ -37,7 +37,7 @@ import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.file.blockfile.impl.CachableBlockFile;
 import org.apache.accumulo.core.file.rfile.RFile;
 import org.apache.accumulo.core.file.streams.PositionedOutputs;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.accumulo.test.randomwalk.Environment;
 import org.apache.accumulo.test.randomwalk.State;
 import org.apache.accumulo.test.randomwalk.Test;
@@ -105,7 +105,7 @@ public class BulkImport extends Test {
 
     String tableName = tableNames.get(rand.nextInt(tableNames.size()));
 
-    Configuration conf = CachedConfiguration.getInstance();
+    Configuration conf = StaticFactory.getInstance(Configuration.class);
     FileSystem fs = FileSystem.get(conf);
 
     String bulkDir = "/tmp/concurrent_bulk/b_" + String.format("%016x", rand.nextLong() & 0x7fffffffffffffffl);

@@ -16,6 +16,7 @@
  */
 package org.apache.accumulo.core.inject;
 
+import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
@@ -23,6 +24,8 @@ import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Stage;
 import com.google.inject.matcher.Matchers;
+import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.inject.util.Modules;
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -83,12 +86,12 @@ public class InjectorBuilder {
       }
     });
   }
-  
+
   /** Create a binding for a specific instance. */
   public <T> InjectorBuilder bindInstance(Class<T> clazz, T instance) {
     return bindInstance(Key.get(clazz), instance);
   }
-  
+
   /**
    * Specify a module substitution. When the {@link Injector} is built, instead of instantiating the {@code target} module, instead insert the
    * {@code substitution} module.
@@ -105,10 +108,18 @@ public class InjectorBuilder {
 
   /** Create an {@link Injector} with the given modules. */
   public Injector build(Stage stage) {
-    Set<Class<? extends Module>> closure=new HashSet<>(new TransitiveClosureSet(specifiedModules));
-    List<Module> instances=new ArrayList<>();
-    
-    for (Class<? extends Module> m:closure) {
+    return Guice.createInjector(stage, instantiateModules());
+  }
+
+  /**
+   * From this {@code InjectorBuilder}, construct the collection of {@link Module}s which would become part of the built Injector. This can be useful if one
+   * wishes to use e.g. {@link com.google.inject.util.Modules#override}.
+   */
+  public List<Module> instantiateModules() {
+    Set<Class<? extends Module>> closure = new HashSet<>(new TransitiveClosureSet(specifiedModules));
+    ImmutableList.Builder<Module> instances = ImmutableList.builder();
+
+    for (Class<? extends Module> m : closure) {
       if (removedModules.contains(m)) {
         continue;
       }
@@ -120,7 +131,19 @@ public class InjectorBuilder {
     }
     instances.addAll(additionalInstances);
 
-    return Guice.createInjector(stage, instances);
+    return instances.build();
+  }
+
+  /**
+   * Combine the functionality of {@link com.google.inject.util.Modules#override} and {@link BoundFieldModule} to ease testing.
+   */
+  public Injector buildTestInjector(Object testClassInstance, Module... addlModules) {
+    List<Module> overrides = new ArrayList<>();
+    overrides.add(BoundFieldModule.of(testClassInstance));
+    overrides.addAll(Arrays.asList(addlModules));
+    Injector injector = Guice.createInjector(Stage.PRODUCTION, Modules.override(instantiateModules()).with(overrides));
+    injector.injectMembers(testClassInstance);
+    return injector;
   }
 
   /**
@@ -135,7 +158,8 @@ public class InjectorBuilder {
       LifecycleManagerImpl managerImpl = new LifecycleManagerImpl();
       bind(LifecycleManagerImpl.class).toInstance(managerImpl);
       bindListener(Matchers.any(), managerImpl);
-      
+
+      // FIXME: Ultimate goal: eliminate all static factories (so we can remove this line).
       requestStaticInjection(StaticFactory.class);
     }
   }

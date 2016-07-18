@@ -39,7 +39,7 @@ import org.apache.accumulo.core.security.NamespacePermission;
 import org.apache.accumulo.core.security.SystemPermission;
 import org.apache.accumulo.core.security.TablePermission;
 import org.apache.accumulo.core.security.thrift.TCredentials;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.accumulo.server.AccumuloServerContext;
 import org.apache.accumulo.server.client.HdfsZooInstance;
 import org.apache.accumulo.server.conf.ServerConfigurationFactory;
@@ -457,7 +457,7 @@ public class WalkingSecurity extends SecurityOperation implements Authorizor, Au
 
     if (fs == null) {
       try {
-        fs = FileSystem.get(CachedConfiguration.getInstance());
+        fs = FileSystem.get(StaticFactory.getInstance(Configuration.class));
       } catch (IOException e) {
         throw new RuntimeException(e);
       }

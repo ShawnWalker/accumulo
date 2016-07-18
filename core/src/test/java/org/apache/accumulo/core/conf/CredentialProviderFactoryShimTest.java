@@ -24,6 +24,8 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import org.apache.accumulo.core.inject.InjectorBuilder;
+import org.apache.accumulo.core.inject.StaticFactory;
 
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
@@ -48,6 +50,7 @@ public class CredentialProviderFactoryShimTest {
 
   @BeforeClass
   public static void checkCredentialProviderAvailable() {
+    InjectorBuilder.newRoot().add(ConfigurationModule.class).build();
     try {
       Class.forName(CredentialProviderFactoryShim.HADOOP_CRED_PROVIDER_CLASS_NAME);
     } catch (Exception e) {
@@ -138,7 +141,7 @@ public class CredentialProviderFactoryShimTest {
   @Test
   public void testConfigurationCreation() throws IOException {
     final String path = "jceks://file/tmp/foo.jks";
-    final Configuration actualConf = CredentialProviderFactoryShim.getConfiguration(path);
+    final Configuration actualConf = CredentialProviderFactoryShim.getConfiguration(StaticFactory.getInstance(Configuration.class), path);
     Assert.assertNotNull(actualConf);
     Assert.assertEquals(path, actualConf.get(CredentialProviderFactoryShim.CREDENTIAL_PROVIDER_PATH));
   }

@@ -32,7 +32,9 @@ import org.apache.accumulo.core.client.impl.ClientContext;
 import org.apache.accumulo.core.client.impl.DelegationTokenImpl;
 import org.apache.accumulo.core.client.security.tokens.KerberosToken;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
+import org.apache.accumulo.core.conf.ConfigurationModule;
 import org.apache.accumulo.core.conf.Property;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 import org.apache.accumulo.core.rpc.SaslConnectionParams.QualityOfProtection;
 import org.apache.accumulo.core.rpc.SaslConnectionParams.SaslMechanism;
 import org.apache.hadoop.conf.Configuration;
@@ -40,12 +42,18 @@ import org.apache.hadoop.fs.CommonConfigurationKeysPublic;
 import org.apache.hadoop.security.UserGroupInformation;
 import org.easymock.EasyMock;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 public class SaslConnectionParamsTest {
 
   private UserGroupInformation testUser;
   private String username;
+
+  @BeforeClass
+  public static void initializeStaticFactories() {
+    InjectorBuilder.newRoot().add(ConfigurationModule.class).build();
+  }
 
   @Before
   public void setup() throws Exception {

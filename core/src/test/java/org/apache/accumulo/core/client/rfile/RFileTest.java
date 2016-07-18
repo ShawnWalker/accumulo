@@ -56,6 +56,9 @@ import org.junit.Assert;
 import org.junit.Test;
 
 import com.google.common.collect.ImmutableMap;
+import org.apache.accumulo.core.conf.ConfigurationModule;
+import org.apache.accumulo.core.inject.InjectorBuilder;
+import org.junit.BeforeClass;
 
 public class RFileTest {
 
@@ -109,6 +112,11 @@ public class RFileTest {
     }
 
     return testFile;
+  }
+
+  @BeforeClass
+  public static void initializeStaticFactories() {
+    InjectorBuilder.newRoot().add(ConfigurationModule.class).build();
   }
 
   @Test

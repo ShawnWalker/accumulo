@@ -55,7 +55,7 @@ public class ZooReaderWriterFactory {
   public IZooReaderWriter getInstance() {
     synchronized (ZooReaderWriterFactory.class) {
       if (instance == null) {
-        AccumuloConfiguration conf = SiteConfiguration.getInstance();
+        AccumuloConfiguration conf = StaticFactory.getInstance(SiteConfigurationModule.KEY);
         instance = getZooReaderWriter(conf.get(Property.INSTANCE_ZK_HOST), (int) conf.getTimeInMillis(Property.INSTANCE_ZK_TIMEOUT),
             conf.get(Property.INSTANCE_SECRET));
       }

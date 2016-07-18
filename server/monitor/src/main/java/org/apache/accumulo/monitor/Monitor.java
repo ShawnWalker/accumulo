@@ -40,7 +40,6 @@ import org.apache.accumulo.core.client.Connector;
 import org.apache.accumulo.core.client.Instance;
 import org.apache.accumulo.core.client.impl.MasterClient;
 import org.apache.accumulo.core.conf.Property;
-import org.apache.accumulo.core.conf.SiteConfiguration;
 import org.apache.accumulo.core.gc.thrift.GCMonitorService;
 import org.apache.accumulo.core.gc.thrift.GCStatus;
 import org.apache.accumulo.core.master.thrift.MasterClientService;
@@ -100,6 +99,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.net.HostAndPort;
+import com.google.inject.Injector;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 
 /**
  * Serve master statistics with an embedded web server.
@@ -420,7 +422,8 @@ public class Monitor {
   }
 
   public static void main(String[] args) throws Exception {
-    SecurityUtil.serverLogin(SiteConfiguration.getInstance());
+    Injector injector=InjectorBuilder.newRoot().add(SiteConfigurationModule.class).build();
+    SecurityUtil.serverLogin(injector.getInstance(SiteConfigurationModule.KEY));
 
     ServerOpts opts = new ServerOpts();
     final String app = "monitor";

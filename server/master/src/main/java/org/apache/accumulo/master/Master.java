@@ -54,7 +54,6 @@ import org.apache.accumulo.core.client.impl.thrift.TableOperationExceptionType;
 import org.apache.accumulo.core.client.impl.thrift.ThriftTableOperationException;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.Property;
-import org.apache.accumulo.core.conf.SiteConfiguration;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.data.impl.KeyExtent;
@@ -162,6 +161,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Iterables;
+import com.google.inject.Injector;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 
 /**
  * The Master is responsible for assigning and balancing tablets to tablet servers.
@@ -1364,8 +1366,10 @@ public class Master extends AccumuloServerContext implements LiveTServerSet.List
   }
 
   public static void main(String[] args) throws Exception {
+    Injector injector=InjectorBuilder.newRoot().add(SiteConfigurationModule.class).build();
+    
     try {
-      SecurityUtil.serverLogin(SiteConfiguration.getInstance());
+      SecurityUtil.serverLogin(injector.getInstance(SiteConfigurationModule.KEY));
 
       ServerOpts opts = new ServerOpts();
       final String app = "master";

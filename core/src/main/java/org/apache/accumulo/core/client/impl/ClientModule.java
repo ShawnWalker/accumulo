@@ -14,16 +14,14 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.accumulo.core.conf;
+package org.apache.accumulo.core.client.impl;
 
 import com.google.inject.AbstractModule;
-import org.apache.accumulo.core.inject.Decorators;
+import org.apache.accumulo.core.conf.ConfigurationModule;
 import org.apache.accumulo.core.inject.Requires;
 
 @Requires(ConfigurationModule.class)
-public class ServerConfigurationModule extends AbstractModule {
+public class ClientModule extends AbstractModule {
   @Override
-  protected void configure() {
-    Decorators.bind(binder(), ConfigurationSource.class).toChain(DefaultConfiguration.class, XmlFileConfigurationSource.class, SensitiveConfigurationSource.class);
-  }  
+  protected void configure() {}
 }

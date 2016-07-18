@@ -38,7 +38,7 @@ import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.data.impl.KeyExtent;
 import org.apache.accumulo.core.file.FileOperations;
 import org.apache.accumulo.core.file.FileSKVWriter;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.accumulo.server.fs.VolumeManager;
 import org.apache.accumulo.server.fs.VolumeManagerImpl;
 import org.apache.commons.lang.NotImplementedException;
@@ -107,7 +107,7 @@ public class BulkImporterTest {
   @Test
   public void testFindOverlappingTablets() throws Exception {
     MockTabletLocator locator = new MockTabletLocator();
-    FileSystem fs = FileSystem.getLocal(CachedConfiguration.getInstance());
+    FileSystem fs = FileSystem.getLocal(StaticFactory.getInstance(Configuration.class));
     ClientContext context = EasyMock.createMock(ClientContext.class);
     EasyMock.expect(context.getConfiguration()).andReturn(DefaultConfiguration.getInstance()).anyTimes();
     EasyMock.replay(context);

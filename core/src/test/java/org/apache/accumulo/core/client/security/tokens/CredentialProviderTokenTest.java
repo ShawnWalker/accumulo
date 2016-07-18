@@ -23,7 +23,9 @@ import java.io.IOException;
 import java.net.URL;
 
 import org.apache.accumulo.core.client.security.tokens.AuthenticationToken.Properties;
+import org.apache.accumulo.core.conf.ConfigurationModule;
 import org.apache.accumulo.core.conf.CredentialProviderFactoryShim;
+import org.apache.accumulo.core.inject.InjectorBuilder;
 import org.junit.Assert;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -37,6 +39,8 @@ public class CredentialProviderTokenTest {
 
   @BeforeClass
   public static void setup() {
+    InjectorBuilder.newRoot().add(ConfigurationModule.class).build();
+
     try {
       Class.forName(CredentialProviderFactoryShim.HADOOP_CRED_PROVIDER_CLASS_NAME);
       isCredentialProviderAvailable = true;

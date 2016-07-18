@@ -28,7 +28,7 @@ import org.apache.accumulo.core.inject.StaticFactory;
  * An {@link AccumuloConfiguration} that contains only default values for properties. This class is a singleton.
  */
 @Singleton
-public class DefaultConfiguration extends AccumuloConfiguration implements ConfigurationSource {
+public class DefaultConfiguration extends AccumuloConfiguration {
   private final static Map<String,String> resolvedProps;
   static {
     Map<String,String> m = new HashMap<>();

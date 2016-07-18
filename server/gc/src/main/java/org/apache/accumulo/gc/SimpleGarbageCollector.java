@@ -43,7 +43,6 @@ import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.client.impl.Tables;
 import org.apache.accumulo.core.conf.Property;
-import org.apache.accumulo.core.conf.SiteConfiguration;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Mutation;
 import org.apache.accumulo.core.data.PartialKey;
@@ -111,7 +110,11 @@ import com.beust.jcommander.Parameter;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
+import com.google.inject.Injector;
 import com.google.protobuf.InvalidProtocolBufferException;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
+import org.apache.accumulo.core.inject.InjectorBuilder;
+import org.apache.accumulo.core.inject.StaticFactory;
 
 public class SimpleGarbageCollector extends AccumuloServerContext implements Iface {
   private static final Text EMPTY_TEXT = new Text();
@@ -140,7 +143,9 @@ public class SimpleGarbageCollector extends AccumuloServerContext implements Ifa
   private GCStatus status = new GCStatus(new GcCycleStats(), new GcCycleStats(), new GcCycleStats(), new GcCycleStats());
 
   public static void main(String[] args) throws UnknownHostException, IOException {
-    SecurityUtil.serverLogin(SiteConfiguration.getInstance());
+    Injector injector=InjectorBuilder.newRoot().add(SiteConfigurationModule.class).build();
+    
+    SecurityUtil.serverLogin(injector.getInstance(SiteConfigurationModule.KEY));
     final String app = "gc";
     Accumulo.setupLogging(app);
     Instance instance = HdfsZooInstance.getInstance();

@@ -134,7 +134,7 @@ import org.apache.accumulo.core.trace.Span;
 import org.apache.accumulo.core.trace.Trace;
 import org.apache.accumulo.core.trace.thrift.TInfo;
 import org.apache.accumulo.core.util.ByteBufferUtil;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.accumulo.core.util.ColumnFQ;
 import org.apache.accumulo.core.util.Daemon;
 import org.apache.accumulo.core.util.MapCounter;
@@ -358,7 +358,7 @@ public class TabletServer extends AccumuloServerContext implements Runnable {
 
     final long walogMaxSize = aconf.getMemoryInBytes(Property.TSERV_WALOG_MAX_SIZE);
     final long walogMaxAge = aconf.getTimeInMillis(Property.TSERV_WALOG_MAX_AGE);
-    final long minBlockSize = CachedConfiguration.getInstance().getLong("dfs.namenode.fs-limits.min-block-size", 0);
+    final long minBlockSize = StaticFactory.getInstance(Configuration.class).getLong("dfs.namenode.fs-limits.min-block-size", 0);
     if (minBlockSize != 0 && minBlockSize > walogMaxSize)
       throw new RuntimeException("Unable to start TabletServer. Logger is set to use blocksize " + walogMaxSize + " but hdfs minimum block size is "
           + minBlockSize + ". Either increase the " + Property.TSERV_WALOG_MAX_SIZE + " or decrease dfs.namenode.fs-limits.min-block-size in hdfs-site.xml.");
@@ -2368,7 +2368,7 @@ public class TabletServer extends AccumuloServerContext implements Runnable {
   // main loop listens for client requests
   @Override
   public void run() {
-    SecurityUtil.serverLogin(SiteConfiguration.getInstance());
+    SecurityUtil.serverLogin(StaticFactory.getInstance(SiteConfigurationModule.KEY));
 
     // To make things easier on users/devs, and to avoid creating an upgrade path to 1.7
     // We can just make the zookeeper paths before we try to use.
@@ -2897,7 +2897,7 @@ public class TabletServer extends AccumuloServerContext implements Runnable {
 
   public static void main(String[] args) throws IOException {
     try {
-      SecurityUtil.serverLogin(SiteConfiguration.getInstance());
+      SecurityUtil.serverLogin(StaticFactory.getInstance(SiteConfigurationModule.KEY));
       ServerOpts opts = new ServerOpts();
       final String app = "tserver";
       opts.parseArgs(app, args);

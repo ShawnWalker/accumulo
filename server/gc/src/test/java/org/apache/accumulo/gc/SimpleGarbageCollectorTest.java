@@ -36,9 +36,9 @@ import java.util.Map.Entry;
 
 import org.apache.accumulo.core.client.Instance;
 import org.apache.accumulo.core.client.impl.Credentials;
+import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.ConfigurationCopy;
 import org.apache.accumulo.core.conf.Property;
-import org.apache.accumulo.core.conf.SiteConfiguration;
 import org.apache.accumulo.core.security.thrift.TCredentials;
 import org.apache.accumulo.core.trace.thrift.TInfo;
 import org.apache.accumulo.gc.SimpleGarbageCollector.Opts;
@@ -63,7 +63,7 @@ public class SimpleGarbageCollectorTest {
   public void setUp() {
     volMgr = createMock(VolumeManager.class);
     instance = createMock(Instance.class);
-    SiteConfiguration siteConfig = EasyMock.createMock(SiteConfiguration.class);
+    AccumuloConfiguration siteConfig = EasyMock.createMock(AccumuloConfiguration.class);
     expect(instance.getInstanceID()).andReturn("mock").anyTimes();
     expect(instance.getZooKeepers()).andReturn("localhost").anyTimes();
     expect(instance.getZooKeepersSessionTimeOut()).andReturn(30000).anyTimes();

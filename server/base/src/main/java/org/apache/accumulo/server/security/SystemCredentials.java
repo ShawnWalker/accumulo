@@ -67,7 +67,7 @@ public final class SystemCredentials extends Credentials {
   public static SystemCredentials get(Instance instance) {
     check_permission();
     String principal = SYSTEM_PRINCIPAL;
-    AccumuloConfiguration conf = SiteConfiguration.getInstance();
+    AccumuloConfiguration conf = StaticFactory.getInstance(SiteConfigurationModule.KEY);
     if (conf.getBoolean(Property.INSTANCE_RPC_SASL_ENABLED)) {
       // Use the server's kerberos principal as the Accumulo principal. We could also unwrap the principal server-side, but the principal for SystemCredentials
       // isnt' actually used anywhere, so it really doesn't matter. We can't include the kerberos principal in the SystemToken as it would break equality when
@@ -114,7 +114,7 @@ public final class SystemCredentials extends Credentials {
       md.update(ServerConstants.WIRE_VERSION.toString().getBytes(UTF_8));
       md.update(instanceIdBytes);
 
-      for (Entry<String,String> entry : SiteConfiguration.getInstance()) {
+      for (Entry<String,String> entry : StaticFactory.getInstance(SiteConfigurationModule.KEY)) {
         // only include instance properties
         if (entry.getKey().startsWith(Property.INSTANCE_PREFIX.toString())) {
           md.update(entry.getKey().getBytes(UTF_8));

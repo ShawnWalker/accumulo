@@ -26,30 +26,31 @@ import javax.inject.Singleton;
 import org.junit.Assert;
 import org.junit.Test;
 
-public class DecoratorsTest {
+public class DecoratorModuleBuilderTest {
   public static interface Appender {
     public void append(StringBuilder sb);
   }
-  
+
   @Singleton
   public static class AppendADecorator implements Appender {
     @Inject
-    @Decoratee Appender decoratee;
-            
+    @Decoratee
+    Appender decoratee;
+
     @Override
     public void append(StringBuilder sb) {
       decoratee.append(sb);
       sb.append('a');
     }
   }
-  
+
   @Singleton
   public static class AppendBDecorator implements Appender {
     private final Appender decoratee;
-    
+
     @Inject
     AppendBDecorator(@Decoratee Appender decoratee) {
-      this.decoratee=decoratee;
+      this.decoratee = decoratee;
     }
 
     @Override
@@ -58,37 +59,33 @@ public class DecoratorsTest {
       sb.append('b');
     }
   }
-  
+
   @Singleton
   public static class BaseAppender implements Appender {
     @Override
-    public void append(StringBuilder sb) {
-    }    
+    public void append(StringBuilder sb) {}
   }
-    
+
   @Test
   public void buildTest() {
-    Injector injector=Guice.createInjector(new AbstractModule() {
+    Injector injector = Guice.createInjector(new AbstractModule() {
       @Override
       protected void configure() {
         bind(Appender.class).annotatedWith(Names.named("foo")).to(BaseAppender.class);
-        Decorators.bind(binder(), Appender.class)
-                .toChain(Key.get(Appender.class, Names.named("foo")),
-                        AppendADecorator.class,
-                        AppendBDecorator.class,
-                        AppendADecorator.class,
-                        AppendADecorator.class)
-                .in(Singleton.class);
+        install(DecoratorModuleBuilder
+            .of(Appender.class)
+            .buildChain(Key.get(Appender.class, Names.named("foo")), AppendADecorator.class, AppendBDecorator.class, AppendADecorator.class,
+                AppendADecorator.class).in(Singleton.class));
       }
     });
-    
-    Appender app=injector.getInstance(Appender.class);
-    
-    StringBuilder sb=new StringBuilder();
+
+    Appender app = injector.getInstance(Appender.class);
+
+    StringBuilder sb = new StringBuilder();
     app.append(sb);
     Assert.assertEquals("abaa", sb.toString());
-    
-    Appender app2=injector.getInstance(Appender.class);
-    Assert.assertTrue(app==app2);
+
+    Appender app2 = injector.getInstance(Appender.class);
+    Assert.assertTrue(app == app2);
   }
 }

@@ -26,22 +26,24 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 @Singleton
-public class XmlFileConfigurationSource implements ConfigurationSource {
-  private final static Logger log=LoggerFactory.getLogger(XmlFileConfigurationSource.class);
+public class XmlFileConfiguration extends AccumuloConfiguration {
+  private final static Logger log = LoggerFactory.getLogger(XmlFileConfiguration.class);
   private final Configuration xmlConfig;
-  
-  @Inject @Decoratee ConfigurationSource chainNext;
-  
-  XmlFileConfigurationSource() {
-    this.xmlConfig=new Configuration(false);
+
+  @Inject
+  @Decoratee
+  AccumuloConfiguration chainNext;
+
+  XmlFileConfiguration() {
+    this.xmlConfig = new Configuration(false);
     String configFile = System.getProperty("org.apache.accumulo.config.file", "accumulo-site.xml");
 
-    if (SiteConfiguration.class.getClassLoader().getResource(configFile) == null)
-      SiteConfiguration.log.warn(configFile + " not found on classpath", new Throwable());
+    if (XmlFileConfiguration.class.getClassLoader().getResource(configFile) == null)
+      log.warn(configFile + " not found on classpath", new Throwable());
     else
       xmlConfig.addResource(configFile);
   }
-  
+
   @Override
   public String get(Property property) {
     String value = xmlConfig.get(property.getKey());
@@ -52,13 +54,13 @@ public class XmlFileConfigurationSource implements ConfigurationSource {
       value = chainNext.get(property);
     }
     return value;
-  }  
+  }
 
   @Override
-  public void getProperties(Map<String, String> props, Predicate<String> filter) {
+  public void getProperties(Map<String,String> props, Predicate<String> filter) {
     chainNext.getProperties(props, filter);
     for (Map.Entry<String,String> entry : xmlConfig)
       if (filter.test(entry.getKey()))
-        props.put(entry.getKey(), entry.getValue());    
+        props.put(entry.getKey(), entry.getValue());
   }
 }

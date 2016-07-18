@@ -24,7 +24,7 @@ import java.net.URISyntaxException;
 
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.Property;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -93,7 +93,7 @@ public class VolumeConfiguration {
    *
    */
   public static String[] getVolumeUris(AccumuloConfiguration conf) {
-    return getVolumeUris(conf, CachedConfiguration.getInstance());
+    return getVolumeUris(conf, StaticFactory.getInstance(Configuration.class));
   }
 
   public static String[] getVolumeUris(AccumuloConfiguration conf, Configuration hadoopConfig) {

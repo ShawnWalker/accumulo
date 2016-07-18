@@ -60,7 +60,7 @@ import org.apache.accumulo.core.metadata.schema.MetadataSchema;
 import org.apache.accumulo.core.metadata.schema.MetadataSchema.TabletsSection.DataFileColumnFamily;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.core.security.TablePermission;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.accumulo.core.zookeeper.ZooUtil;
 import org.apache.accumulo.fate.zookeeper.ZooReader;
 import org.apache.accumulo.minicluster.impl.MiniAccumuloConfigImpl;
@@ -296,7 +296,7 @@ public class VolumeIT extends ConfigurableMacBase {
 
     // check that all volumes are initialized
     for (Path volumePath : Arrays.asList(v1, v2, v3)) {
-      FileSystem fs = volumePath.getFileSystem(CachedConfiguration.getInstance());
+      FileSystem fs = volumePath.getFileSystem(StaticFactory.getInstance(Configuration.class));
       Path vp = new Path(volumePath, ServerConstants.INSTANCE_ID_DIR);
       FileStatus[] iids = fs.listStatus(vp);
       Assert.assertEquals(1, iids.length);
@@ -339,7 +339,7 @@ public class VolumeIT extends ConfigurableMacBase {
 
     // check that all volumes are initialized
     for (Path volumePath : Arrays.asList(v1, v2, v3)) {
-      FileSystem fs = volumePath.getFileSystem(CachedConfiguration.getInstance());
+      FileSystem fs = volumePath.getFileSystem(StaticFactory.getInstance(Configuration.class));
       Path vp = new Path(volumePath, ServerConstants.INSTANCE_ID_DIR);
       FileStatus[] iids = fs.listStatus(vp);
       Assert.assertEquals(1, iids.length);

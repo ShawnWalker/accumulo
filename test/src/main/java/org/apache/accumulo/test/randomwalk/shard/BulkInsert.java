@@ -36,7 +36,7 @@ import org.apache.accumulo.core.data.ColumnUpdate;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Mutation;
 import org.apache.accumulo.core.data.Value;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.accumulo.core.util.TextUtil;
 import org.apache.accumulo.test.randomwalk.Environment;
 import org.apache.accumulo.test.randomwalk.State;
@@ -110,7 +110,7 @@ public class BulkInsert extends Test {
 
     int maxSplits = Integer.parseInt(props.getProperty("maxSplits"));
 
-    Configuration conf = CachedConfiguration.getInstance();
+    Configuration conf = StaticFactory.getInstance(Configuration.class);
     FileSystem fs = FileSystem.get(conf);
 
     String rootDir = "/tmp/shard_bulk/" + dataTableName;
@@ -183,7 +183,7 @@ public class BulkInsert extends Test {
     args[0] = "-libjars";
     args[1] = getMapReduceJars();
 
-    if (ToolRunner.run(CachedConfiguration.getInstance(), sortTool, args) != 0) {
+    if (ToolRunner.run(StaticFactory.getInstance(Configuration.class), sortTool, args) != 0) {
       throw new Exception("Failed to run map/red verify");
     }
   }

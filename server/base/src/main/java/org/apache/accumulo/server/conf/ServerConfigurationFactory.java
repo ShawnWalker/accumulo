@@ -25,8 +25,9 @@ import org.apache.accumulo.core.client.impl.Tables;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.ConfigSanityCheck;
 import org.apache.accumulo.core.conf.DefaultConfiguration;
-import org.apache.accumulo.core.conf.SiteConfiguration;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
 import org.apache.accumulo.core.data.impl.KeyExtent;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.accumulo.fate.zookeeper.ZooCacheFactory;
 
 /**
@@ -113,14 +114,14 @@ public class ServerConfigurationFactory extends ServerConfiguration {
     this.zcf = zcf;
   }
 
-  private SiteConfiguration siteConfig = null;
+  private AccumuloConfiguration siteConfig = null;
   private DefaultConfiguration defaultConfig = null;
   private AccumuloConfiguration systemConfig = null;
 
-  public synchronized SiteConfiguration getSiteConfiguration() {
+  public synchronized AccumuloConfiguration getSiteConfiguration() {
     if (siteConfig == null) {
       checkPermissions();
-      siteConfig = SiteConfiguration.getInstance();
+      siteConfig = StaticFactory.getInstance(SiteConfigurationModule.KEY);
     }
     return siteConfig;
   }

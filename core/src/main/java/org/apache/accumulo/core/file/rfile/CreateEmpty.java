@@ -24,7 +24,6 @@ import org.apache.accumulo.core.cli.Help;
 import org.apache.accumulo.core.conf.DefaultConfiguration;
 import org.apache.accumulo.core.file.FileSKVWriter;
 import org.apache.accumulo.core.file.rfile.bcfile.Compression;
-import org.apache.accumulo.core.conf.CachedConfiguration;
 import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 import org.slf4j.Logger;
@@ -33,6 +32,7 @@ import org.slf4j.LoggerFactory;
 import com.beust.jcommander.IParameterValidator;
 import com.beust.jcommander.Parameter;
 import com.beust.jcommander.ParameterException;
+import org.apache.accumulo.core.inject.StaticFactory;
 
 /**
  * Create an empty RFile for use in recovering from data loss where Accumulo still refers internally to a path.
@@ -69,7 +69,7 @@ public class CreateEmpty {
   }
 
   public static void main(String[] args) throws Exception {
-    Configuration conf = CachedConfiguration.getInstance();
+    Configuration conf = StaticFactory.getInstance(Configuration.class);
 
     Opts opts = new Opts();
     opts.parseArgs(CreateEmpty.class.getName(), args);

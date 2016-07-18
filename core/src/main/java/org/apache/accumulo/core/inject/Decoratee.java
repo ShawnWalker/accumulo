@@ -16,24 +16,14 @@
  */
 package org.apache.accumulo.core.inject;
 
-import com.google.inject.BindingAnnotation;
-import java.lang.annotation.Annotation;
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
+import javax.inject.Qualifier;
 
 /** Binding annotation marking where to inject the next member of a decorator chain. */
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ElementType.FIELD, ElementType.PARAMETER})
-@BindingAnnotation
-public @interface Decoratee {
-  public Class<? extends Annotation> value() default NoBindingAnnotation.class;
-  
-  /** Placeholder annotation. */
-  @Retention(RetentionPolicy.RUNTIME)
-  @Target({ElementType.FIELD, ElementType.PARAMETER})
-  @BindingAnnotation
-  public @interface NoBindingAnnotation {
-  }  
-}
+@Qualifier
+public @interface Decoratee {}

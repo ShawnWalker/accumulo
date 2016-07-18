@@ -87,7 +87,7 @@ public class TestUpgradePathForWALogs {
       walogInHDFStream.close();
       walogInHDFStream = null;
 
-      LogSorter logSorter = new LogSorter(null, fs, SiteConfiguration.getInstance());
+      LogSorter logSorter = new LogSorter(null, fs, StaticFactory.getInstance(SiteConfigurationModule.KEY));
       LogSorter.LogProcessor logProcessor = logSorter.new LogProcessor();
 
       logProcessor.sort(WALOG_FROM_15, new Path("file://" + root.getRoot().getAbsolutePath() + WALOG_FROM_15), "file://" + root.getRoot().getAbsolutePath()
@@ -121,7 +121,7 @@ public class TestUpgradePathForWALogs {
       walogInHDFStream.close();
       walogInHDFStream = null;
 
-      LogSorter logSorter = new LogSorter(null, fs, SiteConfiguration.getInstance());
+      LogSorter logSorter = new LogSorter(null, fs, StaticFactory.getInstance(SiteConfigurationModule.KEY));
       LogSorter.LogProcessor logProcessor = logSorter.new LogProcessor();
 
       logProcessor.sort(walogToTest, new Path("file://" + root.getRoot().getAbsolutePath() + walogToTest), "file://" + root.getRoot().getAbsolutePath()

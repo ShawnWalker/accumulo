@@ -61,7 +61,7 @@ public class KerberosAuthenticator implements Authenticator {
   private final UserImpersonation impersonation;
 
   public KerberosAuthenticator() {
-    this(new ZooCache(), SiteConfiguration.getInstance());
+    this(new ZooCache(), StaticFactory.getInstance(SiteConfigurationModule.KEY));
   }
 
   public KerberosAuthenticator(ZooCache cache, AccumuloConfiguration conf) {

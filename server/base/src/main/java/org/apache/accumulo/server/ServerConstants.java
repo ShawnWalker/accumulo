@@ -25,13 +25,14 @@ import java.util.HashSet;
 import java.util.List;
 
 import org.apache.accumulo.core.conf.Property;
-import org.apache.accumulo.core.conf.SiteConfiguration;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.accumulo.core.util.Pair;
 import org.apache.accumulo.core.volume.Volume;
 import org.apache.accumulo.core.volume.VolumeConfiguration;
 import org.apache.accumulo.core.zookeeper.ZooUtil;
 import org.apache.accumulo.server.fs.VolumeUtil;
+import org.apache.hadoop.conf.Configuration;
 import org.apache.hadoop.fs.Path;
 
 public class ServerConstants {
@@ -85,7 +86,7 @@ public class ServerConstants {
   // these are functions to delay loading the Accumulo configuration unless we must
   public static synchronized String[] getBaseUris() {
     if (baseUris == null) {
-      baseUris = checkBaseUris(VolumeConfiguration.getVolumeUris(SiteConfiguration.getInstance()), false);
+      baseUris = checkBaseUris(VolumeConfiguration.getVolumeUris(StaticFactory.getInstance(SiteConfigurationModule.KEY)), false);
     }
 
     return baseUris;
@@ -102,9 +103,9 @@ public class ServerConstants {
       String currentIid;
       Integer currentVersion;
       try {
-        currentIid = ZooUtil.getInstanceIDFromHdfs(path, SiteConfiguration.getInstance());
+        currentIid = ZooUtil.getInstanceIDFromHdfs(path, StaticFactory.getInstance(SiteConfigurationModule.KEY));
         Path vpath = new Path(baseDir, VERSION_DIR);
-        currentVersion = Accumulo.getAccumuloPersistentVersion(vpath.getFileSystem(CachedConfiguration.getInstance()), vpath);
+        currentVersion = Accumulo.getAccumuloPersistentVersion(vpath.getFileSystem(StaticFactory.getInstance(Configuration.class)), vpath);
       } catch (Exception e) {
         if (ignore)
           continue;
@@ -169,7 +170,7 @@ public class ServerConstants {
   public static synchronized List<Pair<Path,Path>> getVolumeReplacements() {
 
     if (replacementsList == null) {
-      String replacements = SiteConfiguration.getInstance().get(Property.INSTANCE_VOLUMES_REPLACEMENTS);
+      String replacements = StaticFactory.getInstance(SiteConfigurationModule.KEY).get(Property.INSTANCE_VOLUMES_REPLACEMENTS);
 
       replacements = replacements.trim();
 

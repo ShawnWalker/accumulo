@@ -48,6 +48,9 @@ import org.junit.rules.TemporaryFolder;
 import org.junit.rules.TestName;
 
 import com.beust.jcommander.JCommander;
+import org.apache.accumulo.core.conf.ConfigurationModule;
+import org.apache.accumulo.core.inject.InjectorBuilder;
+import org.junit.BeforeClass;
 
 public class TestClientOpts {
   @SuppressWarnings("deprecation")
@@ -60,6 +63,11 @@ public class TestClientOpts {
 
   @Rule
   public TestName testName = new TestName();
+
+  @BeforeClass
+  public static void initializeStaticFactories() {
+    InjectorBuilder.newRoot().add(ConfigurationModule.class).build();
+  }
 
   @Test
   public void test() throws Exception {

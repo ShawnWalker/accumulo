@@ -51,6 +51,9 @@ import org.junit.Test;
 import org.junit.rules.ExpectedException;
 
 import com.google.common.primitives.Bytes;
+import org.apache.accumulo.core.conf.ConfigurationModule;
+import org.apache.accumulo.core.inject.InjectorBuilder;
+import org.junit.BeforeClass;
 
 public class CryptoTest {
 
@@ -63,6 +66,11 @@ public class CryptoTest {
 
   @Rule
   public ExpectedException exception = ExpectedException.none();
+
+  @BeforeClass
+  public static void initializeStaticFactories() {
+    InjectorBuilder.newRoot().add(ConfigurationModule.class).build();
+  }
 
   @Test
   public void testNoCryptoStream() throws IOException {

@@ -65,7 +65,7 @@ import org.apache.accumulo.core.iterators.system.SourceSwitchingIterator;
 import org.apache.accumulo.core.iterators.system.SourceSwitchingIterator.DataSource;
 import org.apache.accumulo.core.sample.impl.SamplerConfigurationImpl;
 import org.apache.accumulo.core.sample.impl.SamplerFactory;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.accumulo.core.util.LocalityGroupUtil;
 import org.apache.accumulo.core.util.LocalityGroupUtil.LocalityGroupConfigurationError;
 import org.apache.accumulo.core.util.LocalityGroupUtil.Partitioner;
@@ -628,10 +628,10 @@ public class InMemoryMap {
 
     private synchronized FileSKVIterator getReader() throws IOException {
       if (reader == null) {
-        Configuration conf = CachedConfiguration.getInstance();
+        Configuration conf = StaticFactory.getInstance(Configuration.class);
         FileSystem fs = FileSystem.getLocal(conf);
 
-        reader = new RFileOperations().newReaderBuilder().forFile(memDumpFile, fs, conf).withTableConfiguration(SiteConfiguration.getInstance())
+        reader = new RFileOperations().newReaderBuilder().forFile(memDumpFile, fs, conf).withTableConfiguration(StaticFactory.getInstance(SiteConfigurationModule.KEY))
             .seekToBeginning().build();
         if (iflag != null)
           reader.setInterruptFlag(iflag);
@@ -790,7 +790,7 @@ public class InMemoryMap {
     if (activeIters.size() > 0) {
       // dump memmap exactly as is to a tmp file on disk, and switch scans to that temp file
       try {
-        Configuration conf = CachedConfiguration.getInstance();
+        Configuration conf = StaticFactory.getInstance(Configuration.class);
         FileSystem fs = FileSystem.getLocal(conf);
 
         String tmpFile = memDumpDir + "/memDump" + UUID.randomUUID() + "." + RFile.EXTENSION;
@@ -798,7 +798,7 @@ public class InMemoryMap {
         Configuration newConf = new Configuration(conf);
         newConf.setInt("io.seqfile.compress.blocksize", 100000);
 
-        AccumuloConfiguration siteConf = SiteConfiguration.getInstance();
+        AccumuloConfiguration siteConf = StaticFactory.getInstance(SiteConfigurationModule.KEY);
 
         if (getOrCreateSampler() != null) {
           siteConf = createSampleConfig(siteConf);

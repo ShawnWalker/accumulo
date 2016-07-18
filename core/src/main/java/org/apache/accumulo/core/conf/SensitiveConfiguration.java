@@ -20,14 +20,21 @@ import java.io.IOException;
 import java.util.Map;
 import java.util.function.Predicate;
 import javax.inject.Inject;
-import static org.apache.accumulo.core.conf.SiteConfiguration.log;
 import org.apache.accumulo.core.inject.Decoratee;
 import org.apache.hadoop.conf.Configuration;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
-public class SensitiveConfigurationSource implements ConfigurationSource {
+public class SensitiveConfiguration extends AccumuloConfiguration {
+  private final static Logger log = LoggerFactory.getLogger(SensitiveConfiguration.class);
+
   @Inject
-  @Decoratee ConfigurationSource chainNext;
-  
+  Configuration baseConf;
+
+  @Inject
+  @Decoratee
+  AccumuloConfiguration chainNext;
+
   @Override
   public String get(Property property) {
     String key = property.getKey();
@@ -51,9 +58,9 @@ public class SensitiveConfigurationSource implements ConfigurationSource {
   }
 
   @Override
-  public void getProperties(Map<String, String> props, Predicate<String> filter) {
+  public void getProperties(Map<String,String> props, Predicate<String> filter) {
     chainNext.getProperties(props, filter);
-    
+
     // CredentialProvider should take precedence over site
     Configuration hadoopConf = getHadoopConfiguration();
     if (null != hadoopConf) {
@@ -75,19 +82,19 @@ public class SensitiveConfigurationSource implements ConfigurationSource {
       }
     }
   }
-  
+
   protected Configuration getHadoopConfiguration() {
     String credProviderPathsValue = chainNext.get(Property.GENERAL_SECURITY_CREDENTIAL_PROVIDER_PATHS);
 
     if (null != credProviderPathsValue) {
       // We have configuration for a CredentialProvider
       // Try to pull the sensitive password from there
-      Configuration conf = new Configuration(CachedConfiguration.getInstance());
+      Configuration conf = new Configuration(baseConf);
       conf.set(CredentialProviderFactoryShim.CREDENTIAL_PROVIDER_PATH, credProviderPathsValue);
       return conf;
     }
 
     return null;
   }
-  
+
 }

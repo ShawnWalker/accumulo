@@ -23,7 +23,7 @@ import java.util.List;
 import org.apache.accumulo.core.client.AccumuloException;
 import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.TableNotFoundException;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.accumulo.server.cli.ClientOnRequiredTable;
 import org.apache.hadoop.fs.FileSystem;
 import org.apache.hadoop.fs.Path;
@@ -41,7 +41,7 @@ public class BulkImportDirectory {
   }
 
   public static void main(String[] args) throws IOException, AccumuloException, AccumuloSecurityException, TableNotFoundException {
-    final FileSystem fs = FileSystem.get(CachedConfiguration.getInstance());
+    final FileSystem fs = FileSystem.get(StaticFactory.getInstance(Configuration.class));
     Opts opts = new Opts();
     opts.parseArgs(BulkImportDirectory.class.getName(), args);
     fs.delete(new Path(opts.failures), true);

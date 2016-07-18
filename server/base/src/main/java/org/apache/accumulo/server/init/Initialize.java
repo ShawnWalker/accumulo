@@ -44,7 +44,6 @@ import org.apache.accumulo.core.client.impl.Namespaces;
 import org.apache.accumulo.core.client.impl.thrift.ThriftSecurityException;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.Property;
-import org.apache.accumulo.core.conf.SiteConfiguration;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.data.impl.KeyExtent;
@@ -70,7 +69,7 @@ import org.apache.accumulo.core.replication.ReplicationConstants;
 import org.apache.accumulo.core.replication.ReplicationSchema.StatusSection;
 import org.apache.accumulo.core.replication.ReplicationSchema.WorkSection;
 import org.apache.accumulo.core.replication.ReplicationTable;
-import org.apache.accumulo.core.conf.CachedConfiguration;
+import org.apache.accumulo.core.inject.StaticFactory;
 import org.apache.accumulo.core.util.ColumnFQ;
 import org.apache.accumulo.core.util.LocalityGroupUtil;
 import org.apache.accumulo.core.util.Pair;
@@ -116,6 +115,8 @@ import com.google.auto.service.AutoService;
 import com.google.common.base.Joiner;
 
 import jline.console.ConsoleReader;
+import org.apache.accumulo.core.conf.Site;
+import org.apache.accumulo.core.conf.SiteConfigurationModule;
 
 /**
  * This class is used to setup the directory structure and the root tablet to get an instance started
@@ -215,13 +216,13 @@ public class Initialize implements KeywordExecutable {
     initialReplicationTableConf.put(Property.TABLE_FORMATTER_CLASS.getKey(), ReplicationUtil.STATUS_FORMATTER_CLASS_NAME);
   }
 
-  static boolean checkInit(Configuration conf, VolumeManager fs, SiteConfiguration sconf) throws IOException {
+  static boolean checkInit(Configuration conf, VolumeManager fs, @Site AccumuloConfiguration sconf) throws IOException {
     @SuppressWarnings("deprecation")
     String fsUri = sconf.get(Property.INSTANCE_DFS_URI);
     if (fsUri.equals(""))
       fsUri = FileSystem.getDefaultUri(conf).toString();
     log.info("Hadoop Filesystem is " + fsUri);
-    log.info("Accumulo data dirs are " + Arrays.asList(VolumeConfiguration.getVolumeUris(SiteConfiguration.getInstance())));
+    log.info("Accumulo data dirs are " + Arrays.asList(VolumeConfiguration.getVolumeUris(StaticFactory.getInstance(SiteConfigurationModule.KEY))));
     log.info("Zookeeper server is " + sconf.get(Property.INSTANCE_ZK_HOST));
     log.info("Checking if Zookeeper is available. If this hangs, then you need to make sure zookeeper is running");
     if (!zookeeperAvailable()) {
@@ -254,14 +255,14 @@ public class Initialize implements KeywordExecutable {
     return true;
   }
 
-  static void printInitializeFailureMessages(SiteConfiguration sconf) {
+  static void printInitializeFailureMessages(@Site AccumuloConfiguration sconf) {
     @SuppressWarnings("deprecation")
     Property INSTANCE_DFS_DIR = Property.INSTANCE_DFS_DIR;
     @SuppressWarnings("deprecation")
     Property INSTANCE_DFS_URI = Property.INSTANCE_DFS_URI;
     String instanceDfsDir = sconf.get(INSTANCE_DFS_DIR);
     // ACCUMULO-3651 Changed level to error and added FATAL to message for slf4j compatibility
-    log.error("FATAL It appears the directories " + Arrays.asList(VolumeConfiguration.getVolumeUris(SiteConfiguration.getInstance()))
+    log.error("FATAL It appears the directories " + Arrays.asList(VolumeConfiguration.getVolumeUris(StaticFactory.getInstance(SiteConfigurationModule.KEY)))
         + " were previously initialized.");
     String instanceVolumes = sconf.get(Property.INSTANCE_VOLUMES);
     String instanceDfsUri = sconf.get(INSTANCE_DFS_URI);
@@ -282,7 +283,7 @@ public class Initialize implements KeywordExecutable {
   }
 
   public boolean doInit(Opts opts, Configuration conf, VolumeManager fs) throws IOException {
-    if (!checkInit(conf, fs, SiteConfiguration.getInstance())) {
+    if (!checkInit(conf, fs, StaticFactory.getInstance(SiteConfigurationModule.KEY))) {
       return false;
     }
 
@@ -305,7 +306,7 @@ public class Initialize implements KeywordExecutable {
     }
 
     // Don't prompt for a password when we're running SASL(Kerberos)
-    final AccumuloConfiguration siteConf = SiteConfiguration.getInstance();
+    final AccumuloConfiguration siteConf = StaticFactory.getInstance(SiteConfigurationModule.KEY);
     if (siteConf.getBoolean(Property.INSTANCE_RPC_SASL_ENABLED)) {
       opts.rootpass = UUID.randomUUID().toString().getBytes(UTF_8);
     } else {
@@ -319,7 +320,7 @@ public class Initialize implements KeywordExecutable {
 
     UUID uuid = UUID.randomUUID();
     // the actual disk locations of the root table and tablets
-    String[] configuredVolumes = VolumeConfiguration.getVolumeUris(SiteConfiguration.getInstance());
+    String[] configuredVolumes = VolumeConfiguration.getVolumeUris(StaticFactory.getInstance(SiteConfigurationModule.KEY));
     final String rootTabletDir = new Path(fs.choose(Optional.<String> empty(), configuredVolumes) + Path.SEPARATOR + ServerConstants.TABLE_DIR + Path.SEPARATOR
         + RootTable.ID + RootTable.ROOT_TABLET_LOCATION).toString();
 
@@ -335,8 +336,8 @@ public class Initialize implements KeywordExecutable {
     } catch (Exception e) {
       log.error("FATAL Failed to initialize filesystem", e);
 
-      if (SiteConfiguration.getInstance().get(Property.INSTANCE_VOLUMES).trim().equals("")) {
-        Configuration fsConf = CachedConfiguration.getInstance();
+      if (StaticFactory.getInstance(SiteConfigurationModule.KEY).get(Property.INSTANCE_VOLUMES).trim().equals("")) {
+        Configuration fsConf = StaticFactory.getInstance(Configuration.class);
 
         final String defaultFsUri = "file:///";
         String fsDefaultName = fsConf.get("fs.default.name", defaultFsUri), fsDefaultFS = fsConf.get("fs.defaultFS", defaultFsUri);
@@ -356,7 +357,7 @@ public class Initialize implements KeywordExecutable {
     // When we're using Kerberos authentication, we need valid credentials to perform initialization. If the user provided some, use them.
     // If they did not, fall back to the credentials present in accumulo-site.xml that the servers will use themselves.
     try {
-      final SiteConfiguration siteConf = confFactory.getSiteConfiguration();
+      final AccumuloConfiguration siteConf = confFactory.getSiteConfiguration();
       if (siteConf.getBoolean(Property.INSTANCE_RPC_SASL_ENABLED)) {
         final UserGroupInformation ugi = UserGroupInformation.getCurrentUser();
         // We don't have any valid creds to talk to HDFS
@@ -414,7 +415,7 @@ public class Initialize implements KeywordExecutable {
   }
 
   private void initFileSystem(Opts opts, VolumeManager fs, UUID uuid, String rootTabletDir) throws IOException {
-    initDirs(fs, uuid, VolumeConfiguration.getVolumeUris(SiteConfiguration.getInstance()), false);
+    initDirs(fs, uuid, VolumeConfiguration.getVolumeUris(StaticFactory.getInstance(SiteConfigurationModule.KEY)), false);
 
     // initialize initial system tables config in zookeeper
     initSystemTablesConfig();
@@ -590,7 +591,7 @@ public class Initialize implements KeywordExecutable {
   }
 
   private String getRootUserName(Opts opts) throws IOException {
-    AccumuloConfiguration conf = SiteConfiguration.getInstance();
+    AccumuloConfiguration conf = StaticFactory.getInstance(SiteConfigurationModule.KEY);
     final String keytab = conf.get(Property.GENERAL_KERBEROS_KEYTAB);
     if (keytab.equals(Property.GENERAL_KERBEROS_KEYTAB.getDefaultValue()) || !conf.getBoolean(Property.INSTANCE_RPC_SASL_ENABLED)) {
       return DEFAULT_ROOT_USER;
@@ -641,7 +642,7 @@ public class Initialize implements KeywordExecutable {
 
   public static void initSystemTablesConfig() throws IOException {
     try {
-      Configuration conf = CachedConfiguration.getInstance();
+      Configuration conf = StaticFactory.getInstance(Configuration.class);
       int max = conf.getInt("dfs.replication.max", 512);
       // Hadoop 0.23 switched the min value configuration name
       int min = Math.max(conf.getInt("dfs.replication.min", 1), conf.getInt("dfs.namenode.replication.min", 1));
@@ -685,7 +686,7 @@ public class Initialize implements KeywordExecutable {
   }
 
   public static boolean isInitialized(VolumeManager fs) throws IOException {
-    for (String baseDir : VolumeConfiguration.getVolumeUris(SiteConfiguration.getInstance())) {
+    for (String baseDir : VolumeConfiguration.getVolumeUris(StaticFactory.getInstance(SiteConfigurationModule.KEY))) {
       if (fs.exists(new Path(baseDir, ServerConstants.INSTANCE_ID_DIR)) || fs.exists(new Path(baseDir, ServerConstants.VERSION_DIR)))
         return true;
     }
@@ -695,7 +696,7 @@ public class Initialize implements KeywordExecutable {
 
   private static void addVolumes(VolumeManager fs) throws IOException {
 
-    String[] volumeURIs = VolumeConfiguration.getVolumeUris(SiteConfiguration.getInstance());
+    String[] volumeURIs = VolumeConfiguration.getVolumeUris(StaticFactory.getInstance(SiteConfigurationModule.KEY));
 
     HashSet<String> initializedDirs = new HashSet<>();
     initializedDirs.addAll(Arrays.asList(ServerConstants.checkBaseUris(volumeURIs, true)));
@@ -708,14 +709,14 @@ public class Initialize implements KeywordExecutable {
     Path iidPath = new Path(aBasePath, ServerConstants.INSTANCE_ID_DIR);
     Path versionPath = new Path(aBasePath, ServerConstants.VERSION_DIR);
 
-    UUID uuid = UUID.fromString(ZooUtil.getInstanceIDFromHdfs(iidPath, SiteConfiguration.getInstance()));
+    UUID uuid = UUID.fromString(ZooUtil.getInstanceIDFromHdfs(iidPath, StaticFactory.getInstance(SiteConfigurationModule.KEY)));
     for (Pair<Path,Path> replacementVolume : ServerConstants.getVolumeReplacements()) {
       if (aBasePath.equals(replacementVolume.getFirst()))
         log.error(aBasePath + " is set to be replaced in " + Property.INSTANCE_VOLUMES_REPLACEMENTS + " and should not appear in " + Property.INSTANCE_VOLUMES
             + ". It is highly recommended that this property be removed as data could still be written to this volume.");
     }
 
-    if (ServerConstants.DATA_VERSION != Accumulo.getAccumuloPersistentVersion(versionPath.getFileSystem(CachedConfiguration.getInstance()), versionPath)) {
+    if (ServerConstants.DATA_VERSION != Accumulo.getAccumuloPersistentVersion(versionPath.getFileSystem(StaticFactory.getInstance(Configuration.class)), versionPath)) {
       throw new IOException("Accumulo " + Constants.VERSION + " cannot initialize data version " + Accumulo.getAccumuloPersistentVersion(fs));
     }
 
@@ -750,9 +751,9 @@ public class Initialize implements KeywordExecutable {
     opts.parseArgs(Initialize.class.getName(), args);
 
     try {
-      AccumuloConfiguration acuConf = SiteConfiguration.getInstance();
+      AccumuloConfiguration acuConf = StaticFactory.getInstance(SiteConfigurationModule.KEY);
       SecurityUtil.serverLogin(acuConf);
-      Configuration conf = CachedConfiguration.getInstance();
+      Configuration conf = StaticFactory.getInstance(Configuration.class);
 
       VolumeManager fs = VolumeManagerImpl.get(acuConf);
 
