@@ -16,66 +16,103 @@
  */
 package org.apache.accumulo.api.data.impl;
 
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
+import java.util.Collections;
+import java.util.SortedSet;
+import java.util.TreeSet;
 
 /** Internal detail of defining keys; represents type information of a single field in the key. */
 public interface Basis {
-
-  /** Ordering of the field. */
-  public SuccessorOrder order();
-
-  /** Type of a range of elements of this field. */
-  public Class<? extends Range> rangeType();
-
-  /** Type of the field. */
-  public default Class<?> type() {
-    ParameterizedType pt = (ParameterizedType) rangeType().getGenericSuperclass();
-    Type[] params = pt.getActualTypeArguments();
-    return (Class<?>) params[0];
+  /** Prototype of a range set of elements for this field; must be nonempty. */
+  public RangeSet setPrototype();
+  
+  /** Type of the set type. */
+  public default Class<? extends RangeSet> setType() {
+    return setPrototype().getClass();
+  }  
+  
+  /** Construct an instance of the empty range set. */
+  public default RangeSet emptySet() {
+    return setPrototype().construct(Collections.emptySortedSet());
   }
-
-  /** Exemplar of an empty range. */
-  public default Range<?, ?, ?> emptyRange() {
-    try {
-      return rangeType().getDeclaredConstructor(type(), type()).newInstance(order().minimumValue(), order().minimumValue());
-    } catch (InstantiationException | NoSuchMethodException | IllegalAccessException | InvocationTargetException ex) {
-      throw new IllegalStateException(ex);
+  
+  /** Construct an instance of the complete range set. */
+  public default RangeSet fullSet() {
+    return setPrototype().construct(new TreeSet(Collections.singleton(order().minimumValue())));
+  }
+  
+  /** Prototype of a nonempty range of elements in this field. */
+  public default Range rangePrototype() {
+    return (Range)setPrototype().iterator().next();
+  }
+    
+  /** Range type for this field. */
+  public default Class<? extends Range> rangeType() {
+    return rangePrototype().getClass();
+  }
+  
+  /** Prototype of an element of this field. */
+  public default Object fieldPrototype() {
+    return rangePrototype().getLowerBound();
+  }
+  
+  /** Type of field. */
+  public default Class<?> fieldType() {
+    return fieldPrototype().getClass();
+  }
+  
+  /** Order type for this field. */
+  public default SuccessorOrder order() {
+    return setPrototype().order();
+  }
+  
+  /** Construct a set from a range. */
+  public default RangeSet constructSet(Range r) {
+    SortedSet ss=new TreeSet(order());
+    if (r.isEmpty()) {
+      return setPrototype().construct(ss);
     }
+    ss.add(r.getLowerBound());
+    if (r.getUpperBound()==null) {
+      return setPrototype().construct(ss);
+    }
+    ss.add(r.getUpperBound());
+    return setPrototype().construct(ss);
+  }
+  
+  /** Exemplar of an empty range. */
+  public default Range emptyRange() {
+    return rangePrototype().construct(order().minimumValue(), order().minimumValue());
   }
 
   /** Exemplar of the full range. */
-  public default Range<?, ?, ?> fullRange() {
-    try {
-      return rangeType().getDeclaredConstructor(type(), type()).newInstance(order().minimumValue(), null);
-    } catch (InstantiationException | NoSuchMethodException | IllegalAccessException | InvocationTargetException ex) {
-      throw new IllegalStateException(ex);
-    }
+  public default Range<?, ?> fullRange() {
+    return rangePrototype().construct(order().minimumValue(), null);
   }
 
   /** Ensure that the collection of fields matches the type described by the basis. */
-  public static void validate(Basis[] basis, Object[] fields) throws IllegalArgumentException {
+  public static boolean isValid(Basis[] basis, Object[] fields) {
     if (basis.length != fields.length) {
-      throw new IllegalArgumentException("Field count mismatch; expected " + basis.length + " fields, found " + fields.length);
+      return false;
     }
     for (int i = 0; i < basis.length; ++i) {
-      if (!basis[i].type().isAssignableFrom(fields[i].getClass())) {
-        throw new IllegalArgumentException("Field type mismatch in position " + i + "; expected " + basis[i].type().getSimpleName() + ", found " + fields[i].getClass().getSimpleName());
+      if (!basis[i].fieldType().isAssignableFrom(fields[i].getClass())) {
+        return false;
       }
     }
+    return true;
   }
 
   /** Ensure that the collection of fields matches the type described by the basis. */
-  public static void validate(Basis[] basis, Range[] ranges) throws IllegalArgumentException {
+  public static boolean isValid(Basis[] basis, Range[] ranges) {
     if (basis.length != ranges.length) {
-      throw new IllegalArgumentException("Field count mismatch; expected " + basis.length + " fields, found " + ranges.length);
+      return false;
     }
     for (int i = 0; i < basis.length; ++i) {
       if (!basis[i].rangeType().isAssignableFrom(ranges[i].getClass())) {
-        throw new IllegalArgumentException("Field type mismatch in position " + i + "; expected " + basis[i].type().getSimpleName() + ", found " + ranges[i].getClass().getSimpleName());
+        return false;
       }
     }
+    return true;
   }
   
 }

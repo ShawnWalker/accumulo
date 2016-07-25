@@ -16,7 +16,9 @@
  */
 package org.apache.accumulo.api.data.impl;
 
+import java.util.Collections;
 import java.util.SortedSet;
+import java.util.TreeSet;
 
 public class DeletionMarker {
   public static final Class<?> TYPE=Boolean.class;
@@ -47,7 +49,7 @@ public class DeletionMarker {
     }
   };
   
-  public static class Range extends org.apache.accumulo.api.data.impl.Range<Boolean, Range, RangeSet> {
+  public static class Range extends org.apache.accumulo.api.data.impl.Range<Boolean, Range> {
     public static final Range EMPTY=new Range(true, true);
     public static final Range ALL=new Range(true, null);
 
@@ -59,14 +61,10 @@ public class DeletionMarker {
     protected Range construct(Boolean lowerBound, Boolean upperBound) {
       return new Range(lowerBound, upperBound);
     }
-
-    @Override
-    protected RangeSet constructSet(SortedSet<Boolean> breakPoints) {
-      return new RangeSet(breakPoints);
-    }
   }
   
   public static class RangeSet extends org.apache.accumulo.api.data.impl.RangeSet<Boolean, Range, RangeSet> {
+    public static RangeSet ALL=new RangeSet(new TreeSet<>(Collections.singleton(Boolean.TRUE)));
     
     RangeSet(SortedSet<Boolean> breakPoints) {
       super(breakPoints, DeletionMarker.ORDER);

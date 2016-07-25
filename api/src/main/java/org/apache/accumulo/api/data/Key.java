@@ -16,15 +16,37 @@
  */
 package org.apache.accumulo.api.data;
 
-import org.apache.accumulo.api.data.impl.KeyDimension;
 import org.apache.accumulo.api.data.impl.DeletionMarker;
 import org.apache.accumulo.api.data.impl.SuccessorOrder;
 import org.apache.accumulo.api.data.impl.Timestamp;
 import java.util.Objects;
 import java.util.SortedSet;
-import org.apache.accumulo.api.data.impl.Tuple;
+import org.apache.accumulo.api.data.impl.Basis;
+import org.apache.accumulo.api.data.impl.ProductElement;
 
-public final class Key extends Tuple<Key> {
+/** A 6 dimensional, dictionary ordered product which serves as the type of a key within Accumulo. */
+public final class Key extends ProductElement<Key> {
+  public static enum Dimension implements Basis {
+    ROW(Bytes.RangeSet.ALL), 
+    FAMILY(Bytes.RangeSet.ALL), 
+    QUALIFIER(Bytes.RangeSet.ALL), 
+    VISIBILITY(Bytes.RangeSet.ALL), 
+    TIMESTAMP(Timestamp.RangeSet.ALL), 
+    DELETION(DeletionMarker.RangeSet.ALL);
+    
+    public static Dimension[] BASIS = values();
+    final org.apache.accumulo.api.data.impl.RangeSet prototype;
+
+    Dimension(org.apache.accumulo.api.data.impl.RangeSet prototype) {
+      this.prototype = prototype;
+    }
+
+    @Override
+    public org.apache.accumulo.api.data.impl.RangeSet setPrototype() {
+      return this.prototype;
+    }
+  }
+  
   public static final Key MIN_VALUE=new Key(
           Bytes.EMPTY, 
           Bytes.EMPTY, 
@@ -32,11 +54,10 @@ public final class Key extends Tuple<Key> {
           Bytes.EMPTY, 
           Timestamp.ORDER.minimumValue(), 
           DeletionMarker.ORDER.minimumValue());
-  public static final SuccessorOrder<Key> ORDER=Tuple.order(KeyDimension.BASIS);
-  
+  public static final SuccessorOrder<Key> ORDER=ProductElement.order(MIN_VALUE);
     
   Key(Object[] fields) {
-    super(KeyDimension.BASIS, fields);
+    super(Dimension.BASIS, fields);
   }
   
   public Key(Bytes row, Bytes family, Bytes qualifier, Bytes visibility, long timestamp, boolean deletion) {
@@ -112,32 +133,32 @@ public final class Key extends Tuple<Key> {
     return new Builder(getRow(), getFamily(), getQualifier(), getVisibility(), getTimestamp(), isDeleted());
   }
   
-  public Object get(KeyDimension dim) {
+  public Object get(Dimension dim) {
     return get(dim.ordinal());
   }
   
   public Bytes getRow() {
-    return (Bytes)get(KeyDimension.ROW);
+    return (Bytes)get(Dimension.ROW);
   }
   
   public Bytes getFamily() {
-    return (Bytes)get(KeyDimension.FAMILY);
+    return (Bytes)get(Dimension.FAMILY);
   }
   
   public Bytes getQualifier() {
-    return (Bytes)get(KeyDimension.QUALIFIER);
+    return (Bytes)get(Dimension.QUALIFIER);
   }
   
   public Bytes getVisibility() {
-    return (Bytes)get(KeyDimension.VISIBILITY);
+    return (Bytes)get(Dimension.VISIBILITY);
   }
   
   public long getTimestamp() {
-    return (Long)get(KeyDimension.TIMESTAMP);
+    return (Long)get(Dimension.TIMESTAMP);
   }
   
   public boolean isDeleted() {
-    return (boolean)get(KeyDimension.DELETION);
+    return (boolean)get(Dimension.DELETION);
   }
   
   @Override
@@ -151,13 +172,12 @@ public final class Key extends Tuple<Key> {
     return new Key(fields);
   }
   
-  public static class Range extends org.apache.accumulo.api.data.impl.Range<Key, Range, RangeSet> {
+  public static class Range extends org.apache.accumulo.api.data.impl.Range<Key, Range> {
     public Range(Key lowerBound, Key upperBound) {
       super(lowerBound, upperBound, Key.ORDER);
     }
     
     @Override protected Range construct(Key lowerBound, Key upperBound) {return new Range(lowerBound, upperBound);}
-    @Override protected RangeSet constructSet(SortedSet<Key> breakPoints) {return new RangeSet(breakPoints);}
   }
   
   public static class RangeSet extends org.apache.accumulo.api.data.impl.RangeSet<Key, Range, RangeSet> {

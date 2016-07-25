@@ -16,13 +16,17 @@
  */
 package org.apache.accumulo.api.data.impl;
 
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.NoSuchElementException;
 import java.util.Set;
 
 /** Abstract implementation of {@link KeySet}, as the union of a collection of boxes. */
-public abstract class ProductBoxSet<ElemImpl extends Tuple<ElemImpl>, BoxImpl extends ProductBox<ElemImpl, BoxImpl, SetImpl>, SetImpl extends ProductBoxSet<ElemImpl, BoxImpl, SetImpl>> {
+public abstract class ProductBoxSet<
+        ElemImpl extends ProductElement<ElemImpl>, 
+        BoxImpl extends ProductBox<ElemImpl, BoxImpl>, 
+        SetImpl extends ProductBoxSet<ElemImpl, BoxImpl, SetImpl>> {
 
   protected final Basis[] basis;
   protected final Set<BoxImpl> boxes;
@@ -90,16 +94,16 @@ public abstract class ProductBoxSet<ElemImpl extends Tuple<ElemImpl>, BoxImpl ex
     return result;
   }
 
-  /** Return the complement of this set.  Note: implementation is very expensive. */
+  /** Return the complement of this set. Implementation is expensive. */
   public SetImpl complement() {
     // Start with everything
     Range[] projections = new Range[basis.length];
     for (int i = 0; i < basis.length; ++i) {
       projections[i] = basis[i].fullRange();
     }
-    SetImpl current = constructBox(projections).asSet();
+    SetImpl current = constructSet(Collections.singleton(constructBox(projections)));
     for (BoxImpl box : boxes) {
-      current = current.intersectionWith(box.complement());
+      current = current.intersectionWith(constructSet(box.complement()));
     }
     return current;
   }
@@ -167,15 +171,29 @@ public abstract class ProductBoxSet<ElemImpl extends Tuple<ElemImpl>, BoxImpl ex
   /** Calculate the projection of this BoxSet onto the given axis. */
   protected RangeSet projectTo(int index) {
     if (isEmpty()) {
-      return basis[index].emptyRange().asSet();
+      return basis[index].emptySet();
     }
     Iterator<BoxImpl> iterator = boxes.iterator();
-    RangeSet firstProjection = iterator.next().projectTo(index).asSet();
+    RangeSet firstProjection = basis[index].constructSet(iterator.next().projectTo(index));
     RangeSet[] projections = new RangeSet[boxes.size() - 1];
     for (int i = 1; i < boxes.size(); ++i) {
-      projections[i - 1] = iterator.next().projectTo(index).asSet();
+      projections[i - 1] = basis[index].constructSet(iterator.next().projectTo(index));
     }
     return firstProjection.unionWith(projections);
   }
   
+  @Override
+  public String toString() {
+    StringBuilder sb=new StringBuilder();
+    boolean needSep=false;
+    for (BoxImpl box:boxes) {
+      if (needSep) {
+        sb.append('+');
+      } else {
+        needSep=true;
+      }
+      sb.append(box.toString());
+    }
+    return sb.toString();
+  }
 }

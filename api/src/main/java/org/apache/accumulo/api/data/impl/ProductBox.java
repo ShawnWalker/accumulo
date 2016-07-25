@@ -23,16 +23,14 @@ import java.util.NoSuchElementException;
 import java.util.Set;
 
 /** Building block for {@link KeySet}, represents a box in the product space.  Totally ordered in the lexicographical ordering on sets. */
-public abstract class ProductBox<ElemImpl extends Tuple<ElemImpl>, BoxImpl extends ProductBox<ElemImpl, BoxImpl, SetImpl>, SetImpl extends ProductBoxSet<ElemImpl, BoxImpl, SetImpl>> {
-
+public abstract class ProductBox<ElemImpl extends ProductElement<ElemImpl>, BoxImpl extends ProductBox<ElemImpl, BoxImpl>> {
   protected final Basis[] basis;
   protected final Range[] projections;
 
   protected ProductBox(Basis[] basis, Range[] projections) {
-    super();
+    assert Basis.isValid(basis, projections);
     this.basis = basis;
     this.projections = projections;
-    Basis.validate(basis, projections);
   }
 
   /** Implemented by subclass.  Construct an element instance. */
@@ -40,18 +38,6 @@ public abstract class ProductBox<ElemImpl extends Tuple<ElemImpl>, BoxImpl exten
 
   /** Implemented by subclass.  Construct an instance of the subclass. */
   protected abstract BoxImpl constructBox(Range[] projections);
-
-  /** Implemented by subclass.  Construct a set with the specified boxes. */
-  protected abstract SetImpl constructSet(Set<BoxImpl> boxes);
-
-  /** Return a view of this {@code Box} as a {@link #BoxSet} */
-  public SetImpl asSet() {
-    if (isEmpty()) {
-      return constructSet(Collections.<BoxImpl>emptySet());
-    } else {
-      return constructSet(Collections.singleton((BoxImpl) this));
-    }
-  }
 
   /** True if this box contains the specified element. */
   public boolean contains(ElemImpl element) {
@@ -153,20 +139,19 @@ public abstract class ProductBox<ElemImpl extends Tuple<ElemImpl>, BoxImpl exten
   }
 
   /**
-   * Calculate the complement of this box.  This is moderately expensive, as the complement of a box may take up to
-   * 2*(basis.length) boxes to represent.
+   * Calculate the complement of this box, as a collection of boxes with the same basis.
    */
-  public SetImpl complement() {
+  protected Set<BoxImpl> complement() {
     if (isEmpty()) {
       Range[] ranges = new Range[basis.length];
       for (int i = 0; i < ranges.length; ++i) {
         ranges[i] = basis[i].fullRange();
       }
-      return constructBox(ranges).asSet();
+      return Collections.singleton(constructBox(ranges));
     }
     Set<BoxImpl> complBoxes = new HashSet<>();
     for (int i = 0; i < basis.length; ++i) {
-      RangeSet projComplement = projections[i].asSet().complement();
+      RangeSet projComplement = basis[i].constructSet(projections[i]).complement();
       for (Range r : (Iterable<Range>) projComplement) {
         Range[] newProjections = new Range[basis.length];
         for (int j = 0; j < basis.length; ++j) {
@@ -179,9 +164,7 @@ public abstract class ProductBox<ElemImpl extends Tuple<ElemImpl>, BoxImpl exten
         complBoxes.add(constructBox(newProjections));
       }
     }
-    // Take us out.
-    complBoxes.remove((BoxImpl) this);
-    return constructSet(complBoxes);
+    return complBoxes;
   }
 
   @Override
@@ -209,4 +192,18 @@ public abstract class ProductBox<ElemImpl extends Tuple<ElemImpl>, BoxImpl exten
     return Arrays.hashCode(projections);
   }
   
+  @Override
+  public String toString() {
+    StringBuilder sb=new StringBuilder();
+    boolean needSep=false;
+    for (int i=0;i<projections.length;++i) {
+      if (needSep) {
+        sb.append('*');
+      } else {
+        needSep=true;
+      }
+      sb.append(projections[i].toString());
+    }
+    return sb.toString();
+  }
 }

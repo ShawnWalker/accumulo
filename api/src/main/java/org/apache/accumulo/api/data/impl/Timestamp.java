@@ -50,7 +50,7 @@ public class Timestamp {
     }
   };
 
-  public static class Range extends org.apache.accumulo.api.data.impl.Range<Long, Range, RangeSet> {
+  public static class Range extends org.apache.accumulo.api.data.impl.Range<Long, Range> {
     public static final Range EMPTY = new Range(Long.MAX_VALUE, Long.MAX_VALUE);
     public static final Range ALL = new Range(Long.MAX_VALUE, null);
 
@@ -61,11 +61,6 @@ public class Timestamp {
     @Override
     protected Range construct(Long lowerBound, Long upperBound) {
       return new Range(lowerBound, upperBound);
-    }
-    
-    @Override
-    protected RangeSet constructSet(SortedSet<Long> breakPoints) {
-      return new RangeSet(breakPoints);
     }
   }
 

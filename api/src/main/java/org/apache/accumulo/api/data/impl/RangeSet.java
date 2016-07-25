@@ -16,6 +16,7 @@
  */
 package org.apache.accumulo.api.data.impl;
 
+import java.util.Collections;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -26,34 +27,21 @@ import java.util.TreeMap;
 import java.util.TreeSet;
 import java.util.function.BiPredicate;
 
-public abstract class RangeSet<T, RangeType extends Range<T, RangeType, ImplType>, 
+public abstract class RangeSet<T, RangeType extends Range<T, RangeType>, 
         ImplType extends RangeSet<T, RangeType, ImplType>> implements Iterable<RangeType> {
   private final SortedSet<T> breakPoints;
   private final SuccessorOrder<T> order;
+  
+  protected RangeSet(SuccessorOrder<T> order) {
+    this.breakPoints=Collections.emptySortedSet();
+    this.order=order;
+  }
   
   protected RangeSet(SortedSet<T> breakPoints, SuccessorOrder<T> order) {
     this.breakPoints=Objects.requireNonNull(breakPoints);
     this.order=order;
   }
-  
-  protected RangeSet(Iterable<RangeType> ranges, SuccessorOrder<T> order) {
-    this.order=order;
-    SortedMap<T, Integer> counts=new TreeMap<>(order);
-    for (RangeType range:ranges) {
-      if (!counts.containsKey(range.getLowerBound())) {
-        counts.put(range.getLowerBound(), 0);
-      }
-      counts.put(range.getLowerBound(), counts.get(range.getLowerBound())+1);
-      if (range.getUpperBound()!=null) {
-        if (!counts.containsKey(range.getUpperBound())) {
-          counts.put(range.getUpperBound(), 0);          
-        }
-        counts.put(range.getUpperBound(), counts.get(range.getUpperBound())-1);
-      }
-    }
-    this.breakPoints=accumulate((before, after)->((before==0)!=(after==0)), counts);
-  }
-  
+    
   /** Implemented by subclass.  Construct an instance of the subclass with the given breakpoints. */
   protected abstract ImplType construct(SortedSet<T> breakPoints);
   
@@ -214,6 +202,9 @@ public abstract class RangeSet<T, RangeType extends Range<T, RangeType, ImplType
   
   @Override
   public String toString() {
+    if (isEmpty()) {
+      return "(empty)";
+    }
     StringBuilder sb=new StringBuilder();
     for (RangeType r:this) {
       sb.append(r.toString());

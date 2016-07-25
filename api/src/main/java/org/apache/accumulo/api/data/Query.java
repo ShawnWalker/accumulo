@@ -16,15 +16,12 @@
  */
 package org.apache.accumulo.api.data;
 
-import org.apache.accumulo.api.data.impl.KeySet;
-import org.apache.accumulo.api.data.impl.Range;
 import java.util.Arrays;
 import java.util.Objects;
-import org.apache.accumulo.api.data.impl.KeyDimension;
 import org.apache.accumulo.api.data.impl.Timestamp;
 
 /** 
- * Utility class for constructing instances of {@link Key.KeySet}. 
+ * Utility class for constructing instances of {@link KeySet}. 
  */
 public class Query {
   /** Match any key. */
@@ -66,18 +63,11 @@ public class Query {
   public static KeySet not(KeySet keySet) {
     return keySet.complement();
   }
-  
-  /** Construct a cylinder; that is, an object who's projection onto all axes except the specified axis is full. */
-  static KeySet cylinder(KeyDimension dim, Range<?,?,?> range) {
-    Range[] projections=Arrays.copyOf(KeyBox.ALL.getProjections(), KeyBox.ALL.getProjections().length);
-    projections[dim.ordinal()]=range;
-    return new KeyBox(projections).asSet();
-  }
-  
-  public static final BytesQuery ROW=new BytesQuery(KeyDimension.ROW);
-  public static final BytesQuery FAMILY=new BytesQuery(KeyDimension.FAMILY);
-  public static final BytesQuery QUALIFIER=new BytesQuery(KeyDimension.QUALIFIER);
-  public static final BytesQuery VISIBILITY=new BytesQuery(KeyDimension.VISIBILITY);
+    
+  public static final BytesQuery ROW=new BytesQuery(org.apache.accumulo.api.data.Key.Dimension.ROW);
+  public static final BytesQuery FAMILY=new BytesQuery(org.apache.accumulo.api.data.Key.Dimension.FAMILY);
+  public static final BytesQuery QUALIFIER=new BytesQuery(org.apache.accumulo.api.data.Key.Dimension.QUALIFIER);
+  public static final BytesQuery VISIBILITY=new BytesQuery(org.apache.accumulo.api.data.Key.Dimension.VISIBILITY);
           
   public static class BytesQuery {
     //
@@ -109,7 +99,7 @@ public class Query {
     public KeySet lessThan(String value) {return lessThan(Bytes.copyOf(value));}
     public KeySet lessThanOrEqualTo(String value) {return lessThanOrEqualTo(Bytes.copyOf(value));}
     public KeySet greaterThan(String value) {return greaterThan(Bytes.copyOf(value));}
-    public KeySet greaterThanOrEqualTo(String value) {return greaterThan(Bytes.copyOf(value));}
+    public KeySet greaterThanOrEqualTo(String value) {return greaterThanOrEqualTo(Bytes.copyOf(value));}
     
     public KeySet lt(Bytes value) {return lessThan(value);}
     public KeySet lt(String value) {return lessThan(value);}
@@ -176,13 +166,13 @@ public class Query {
     // Impl.
     //
     
-    protected final KeyDimension dim;
-    private BytesQuery(KeyDimension dim) {
+    protected final org.apache.accumulo.api.data.Key.Dimension dim;
+    private BytesQuery(org.apache.accumulo.api.data.Key.Dimension dim) {
       this.dim=dim;
     }
     
     protected KeySet cylinder(Bytes begin, Bytes end) {
-      return Query.cylinder(dim, new Bytes.Range(begin, end));
+      return KeySet.cylinder(dim, new Bytes.Range(begin, end));
     }
     
     /** Calculate the {@link Bytes} which is just larger than all byte strings starting with {@code prefix}. */
@@ -203,11 +193,7 @@ public class Query {
    * For clarity, we provide query operators matching natural ordering of long, despite the fact that timestamps are
    * internally ordered in reverse.
    */
-  public static class TimestampQuery {
-    protected KeySet cylinder(long end, Long start) {
-      return Query.cylinder(KeyDimension.TIMESTAMP, new Timestamp.Range(end, start));
-    }
-    
+  public static class TimestampQuery {    
     //
     // Singleton
     //
@@ -260,5 +246,9 @@ public class Query {
     public KeySet openClosed(long start, long end) {
       return cylinder(end, start);
     }
+    
+    protected KeySet cylinder(long end, Long start) {
+      return KeySet.cylinder(org.apache.accumulo.api.data.Key.Dimension.TIMESTAMP, new Timestamp.Range(end, start));
+    }    
   }
 }

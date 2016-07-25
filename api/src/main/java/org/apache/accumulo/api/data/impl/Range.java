@@ -18,14 +18,16 @@ package org.apache.accumulo.api.data.impl;
 
 import java.util.Iterator;
 import java.util.Objects;
-import java.util.SortedSet;
-import java.util.TreeSet;
 
-public abstract class Range<T, Impl extends Range<T, Impl, SetType>, SetType extends RangeSet<T, Impl, SetType>> implements Iterable<T> {
+public abstract class Range<T, Impl extends Range<T, Impl>> implements Iterable<T> {
   private final SuccessorOrder<T> baseOrder;
   private final SuccessorOrder<T> order;
   protected final T lowerBound;
   protected final T upperBound;
+  
+  protected Range(SuccessorOrder<T> order) {
+    this(order.minimumValue(), order.minimumValue(), order);
+  }
   
   protected Range(T lowerBound, T upperBound, SuccessorOrder<T> order) {
     this.baseOrder=order;
@@ -39,20 +41,6 @@ public abstract class Range<T, Impl extends Range<T, Impl, SetType>, SetType ext
   
   /** Implemented by subclass.  Construct an instance of the subclass. */
   protected abstract Impl construct(T lowerBound, T upperBound);
-  
-  /** Implemented by subclass.  Construct a set from this range. */
-  protected abstract SetType constructSet(SortedSet<T> breakPoints);
-  
-  public SetType asSet() {
-    SortedSet<T> breakSet=new TreeSet<>(order());
-    if (isEmpty()) return constructSet(breakSet);
-    
-    breakSet.add(getLowerBound());
-    if (getUpperBound()!=null) {
-      breakSet.add(getUpperBound());
-    }
-    return constructSet(breakSet);
-  }
   
   /** Return the underlying order on this range. */
   public SuccessorOrder<T> order() {
@@ -125,7 +113,7 @@ public abstract class Range<T, Impl extends Range<T, Impl, SetType>, SetType ext
     if (getClass()!=rhsObject.getClass()) {
       return false;
     }
-    Range<T, Impl, SetType> rhs=(Range<T, Impl, SetType>)rhsObject;
+    Range<T, Impl> rhs=(Range<T, Impl>)rhsObject;
     return (this.isEmpty() && rhs.isEmpty()) || 
             (order.compare(this.lowerBound, rhs.lowerBound)==0 && order.compare(this.upperBound, rhs.upperBound)==0);
   }
@@ -134,6 +122,8 @@ public abstract class Range<T, Impl extends Range<T, Impl, SetType>, SetType ext
   public String toString() {
     if (isEmpty()) {
       return "[)";
+    } else if (lowerBound.equals(order.minimumValue()) && upperBound==null) {
+      return "<any>";
     }
     return "["+lowerBound.toString()+", "+(Objects.equals(upperBound, order.maximumValue())?"+ifty":upperBound.toString())+")";
   }

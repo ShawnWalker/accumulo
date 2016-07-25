@@ -59,7 +59,14 @@ public final class Bytes implements Comparable<Bytes> {
 
     @Override
     public boolean isFinite(Bytes begin, Bytes end) {
-      return begin.distanceTo(end)!=null;
+      if (end.length()<begin.length()) {return false;}
+      if (!end.substr(0, begin.length()).equals(begin)) {return false;}
+      for (int i=begin.length();i<end.length();++i) {
+        if (end.byteAt(i)!=0) {
+          return false;
+        }
+      }
+      return true;
     }
   };
           
@@ -297,17 +304,6 @@ public final class Bytes implements Comparable<Bytes> {
     return new Bytes(content, start, end, endPadding + 1);
   }
   
-  public Long distanceTo(Bytes other) {
-    if (other.length()<this.length()) {return null;}
-    if (!other.substr(0, this.length()).equals(this)) {return null;}
-    for (int i=this.length();i<other.length();++i) {
-      if (other.byteAt(i)!=0) {
-        return null;
-      }
-    }
-    return (long)(other.length()-this.length());
-  }
-
   @Override
   public int compareTo(Bytes rhs) {
     int commonLength = Math.min(this.length(), rhs.length());
@@ -322,23 +318,14 @@ public final class Bytes implements Comparable<Bytes> {
     return this.length() - rhs.length();
   }
 
-  public static class Range extends org.apache.accumulo.api.data.impl.Range<Bytes, Range, RangeSet> {
+  public static class Range extends org.apache.accumulo.api.data.impl.Range<Bytes, Range> {
     public static final Range EMPTY = new Range(Bytes.EMPTY, Bytes.EMPTY);
     public static final Range ALL = new Range(Bytes.ORDER.minimumValue(), null);
 
     Range(Bytes lowerBound, Bytes upperBound) {
       super(lowerBound, upperBound, Bytes.ORDER);
     }
-
-    @Override
-    protected Range construct(Bytes lowerBound, Bytes upperBound) {
-      return new Range(lowerBound, upperBound);
-    }
-
-    @Override
-    protected RangeSet constructSet(SortedSet<Bytes> breakPoints) {
-      return new RangeSet(breakPoints);
-    }
+    @Override protected Range construct(Bytes lowerBound, Bytes upperBound) {return new Range(lowerBound, upperBound);}
   }
 
   public static class RangeSet extends org.apache.accumulo.api.data.impl.RangeSet<Bytes, Range, RangeSet> {

@@ -16,7 +16,6 @@
  */
 package org.apache.accumulo.api.data;
 
-import org.apache.accumulo.api.data.impl.KeySet;
 import java.util.HashSet;
 import java.util.Set;
 import static org.apache.accumulo.api.data.Query.FAMILY;
@@ -24,8 +23,6 @@ import static org.apache.accumulo.api.data.Query.ROW;
 import static org.apache.accumulo.api.data.Query.not;
 import org.junit.Test;
 import org.junit.Assert;
-import static org.apache.accumulo.api.data.Query.and;
-import static org.apache.accumulo.api.data.Query.or;
 import static org.apache.accumulo.api.data.Query.and;
 import static org.apache.accumulo.api.data.Query.or;
 
@@ -51,15 +48,15 @@ public class QueryTest {
     }
     Assert.assertEquals(4, families.size());
     for (int i=0;i<4;++i) {
-      Assert.assertTrue(families.contains(("fam"+(i+1))));
+      Assert.assertTrue(families.contains(Bytes.copyOf("fam"+(i+1))));
     }
   }
   
   @Test
   public void testContains() {
-    Assert.assertTrue(QUERY.contains(new Key.Builder().row(("123")).family(("fam3")).qualifier(Bytes.EMPTY).timestamp(0).build()));
-    Assert.assertTrue(!QUERY.contains(new Key.Builder().row(("123")).family(("fam")).qualifier(Bytes.EMPTY).timestamp(0).build()));
-    Assert.assertTrue(!QUERY.contains(new Key.Builder().row(("223")).family(("fam3")).qualifier(Bytes.EMPTY).timestamp(0).build()));
+    Assert.assertTrue(QUERY.contains(new Key.Builder().row("123").family("fam3").qualifier(Bytes.EMPTY).timestamp(0).build()));
+    Assert.assertTrue(!QUERY.contains(new Key.Builder().row("123").family("fam").qualifier(Bytes.EMPTY).timestamp(0).build()));
+    Assert.assertTrue(!QUERY.contains(new Key.Builder().row("223").family("fam3").qualifier(Bytes.EMPTY).timestamp(0).build()));
   }
   
   @Test

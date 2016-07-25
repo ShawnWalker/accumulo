@@ -19,30 +19,41 @@ package org.apache.accumulo.api.data.impl;
 import java.util.Arrays;
 
 /** A tuple of a collection of types, in dictionary order. This is the abstract implementation of {@link Key}. */
-public abstract class Tuple<Impl extends Tuple<Impl>> implements Comparable<Impl> {
+public abstract class ProductElement<Impl extends ProductElement<Impl>> implements Comparable<Impl> {
   protected final Basis[] basis;
   protected final Object[] fields;
 
-  protected Tuple(Basis[] basis, Object[] fields) {
-    super();
-    Basis.validate(basis, fields);
+  protected ProductElement(Basis[] basis) {
+    this.basis=basis;
+    this.fields=new Object[basis.length];
+    for (int i=0;i<basis.length;++i) {
+      fields[i]=basis[i].order().minimumValue();
+    }
+  }
+  
+  protected ProductElement(Basis[] basis, Object[] fields) {
+    assert Basis.isValid(basis, fields);
     this.basis = basis;
     this.fields = fields;
   }
 
   /** Construct an instance of the implementation given the fields. */
   protected abstract Impl construct(Object[] fields);
-
+  
   protected Object get(int index) {
     return fields[index];
   }
 
+  protected Basis[] basis() {
+    return basis;
+  }
+  
   @Override
   public boolean equals(Object rhsObject) {
-    if (!(rhsObject instanceof Tuple)) {
+    if (!(rhsObject instanceof ProductElement)) {
       return false;
     }
-    Tuple rhs = (Tuple) rhsObject;
+    ProductElement rhs = (ProductElement) rhsObject;
     return basis == rhs.basis && Arrays.equals(fields, rhs.fields);
   }
 
@@ -51,16 +62,18 @@ public abstract class Tuple<Impl extends Tuple<Impl>> implements Comparable<Impl
     return Arrays.hashCode(fields);
   }
 
-  protected static <Impl extends Tuple<Impl>> SuccessorOrder<Impl> order(final Impl prototype) {
+  protected static <Impl extends ProductElement<Impl>> SuccessorOrder<Impl> order(Impl prototype) {
+    Basis[] basis=prototype.basis;
+    
     // Precalculate min/max value.
-    Object[] minValueFields = new Object[prototype.basis.length];
-    for (int i = 0; i < prototype.basis.length; ++i) {
-      minValueFields[i] = prototype.basis[i].order().minimumValue();
+    Object[] minValueFields = new Object[basis.length];
+    for (int i = 0; i < basis.length; ++i) {
+      minValueFields[i] = basis[i].order().minimumValue();
     }
     final Impl minValue = prototype.construct(minValueFields);
-    Object[] maxValueFields = new Object[prototype.basis.length];
-    for (int i = 0; i < prototype.basis.length; ++i) {
-      Object fieldMax = prototype.basis[i].order().maximumValue();
+    Object[] maxValueFields = new Object[basis.length];
+    for (int i = 0; i < basis.length; ++i) {
+      Object fieldMax = basis[i].order().maximumValue();
       if (fieldMax == null) {
         maxValueFields = null;
         break;
@@ -82,23 +95,23 @@ public abstract class Tuple<Impl extends Tuple<Impl>> implements Comparable<Impl
       @Override
       public Impl successor(Impl instance) {
         Object[] newFields = Arrays.copyOf(instance.fields, instance.fields.length);
-        for (int i = prototype.basis.length - 1; i >= 0; --i) {
-          if (prototype.basis[i].order().maximumValue() == null || !newFields[i].equals(prototype.basis[i].order().maximumValue())) {
-            newFields[i] = prototype.basis[i].order().successor(newFields[i]);
+        for (int i = basis.length - 1; i >= 0; --i) {
+          if (basis[i].order().maximumValue() == null || !newFields[i].equals(basis[i].order().maximumValue())) {
+            newFields[i] = basis[i].order().successor(newFields[i]);
             return prototype.construct(newFields);
           }
-          newFields[i] = prototype.basis[i].order().minimumValue();
+          newFields[i] = basis[i].order().minimumValue();
         }
         return null;
       }
 
       @Override
       public boolean isFinite(Impl begin, Impl end) {
-        for (int i = prototype.basis.length - 1; i >= 0; --i) {
-          if (!prototype.basis[i].order().isFinite(begin.fields[i], end.fields[i])) {
+        for (int i = basis.length - 1; i >= 0; --i) {
+          if (!basis[i].order().isFinite(begin.fields[i], end.fields[i])) {
             return false;
           }
-          if (prototype.basis[i].order().maximumValue() == null) {
+          if (basis[i].order().maximumValue() == null) {
             return false;
           }
         }
