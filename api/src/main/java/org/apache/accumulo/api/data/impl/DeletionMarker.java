@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.accumulo.api.data;
+package org.apache.accumulo.api.data.impl;
 
 import java.util.SortedSet;
 
@@ -47,7 +47,7 @@ public class DeletionMarker {
     }
   };
   
-  public static class Range extends org.apache.accumulo.api.data.Range<Boolean, Range, RangeSet> {
+  public static class Range extends org.apache.accumulo.api.data.impl.Range<Boolean, Range, RangeSet> {
     public static final Range EMPTY=new Range(true, true);
     public static final Range ALL=new Range(true, null);
 
@@ -66,7 +66,7 @@ public class DeletionMarker {
     }
   }
   
-  public static class RangeSet extends org.apache.accumulo.api.data.RangeSet<Boolean, Range, RangeSet> {
+  public static class RangeSet extends org.apache.accumulo.api.data.impl.RangeSet<Boolean, Range, RangeSet> {
     
     RangeSet(SortedSet<Boolean> breakPoints) {
       super(breakPoints, DeletionMarker.ORDER);

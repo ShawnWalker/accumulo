@@ -16,11 +16,15 @@
  */
 package org.apache.accumulo.api.data;
 
-import java.util.Collections;
+import org.apache.accumulo.api.data.impl.KeyDimension;
+import org.apache.accumulo.api.data.impl.DeletionMarker;
+import org.apache.accumulo.api.data.impl.SuccessorOrder;
+import org.apache.accumulo.api.data.impl.Timestamp;
 import java.util.Objects;
-import org.apache.accumulo.api.data.Product.Basis;
+import java.util.SortedSet;
+import org.apache.accumulo.api.data.impl.Tuple;
 
-public final class Key extends Product.Tuple<Key> {
+public final class Key extends Tuple<Key> {
   public static final Key MIN_VALUE=new Key(
           Bytes.EMPTY, 
           Bytes.EMPTY, 
@@ -28,40 +32,11 @@ public final class Key extends Product.Tuple<Key> {
           Bytes.EMPTY, 
           Timestamp.ORDER.minimumValue(), 
           DeletionMarker.ORDER.minimumValue());
-  public static final SuccessorOrder<Key> ORDER=Product.Tuple.order(MIN_VALUE);
+  public static final SuccessorOrder<Key> ORDER=Tuple.order(KeyDimension.BASIS);
   
-  public static enum Dimension implements Product.Basis {
-    ROW(Bytes.TYPE, Bytes.ORDER, Bytes.Range.class, Bytes.Range.EMPTY, Bytes.Range.ALL),
-    FAMILY(Bytes.TYPE, Bytes.ORDER, Bytes.Range.class, Bytes.Range.EMPTY, Bytes.Range.ALL),
-    QUALIFIER(Bytes.TYPE, Bytes.ORDER, Bytes.Range.class, Bytes.Range.EMPTY, Bytes.Range.ALL),
-    VISIBILITY(Bytes.TYPE, Bytes.ORDER, Bytes.Range.class, Bytes.Range.EMPTY, Bytes.Range.ALL),
-    TIMESTAMP(Timestamp.TYPE, Timestamp.ORDER, Timestamp.Range.class, Timestamp.Range.EMPTY, Timestamp.Range.ALL),
-    DELETION(DeletionMarker.TYPE, DeletionMarker.ORDER, DeletionMarker.Range.class, DeletionMarker.Range.EMPTY, DeletionMarker.Range.ALL);
-
-    public static final Basis[] BASIS=values();
-    private final Class<?> type;
-    private final SuccessorOrder order;
-    private final Class<? extends Range> rangeType;
-    private final Range<?,?,?> emptyRange;
-    private final Range<?,?,?> fullRange;
-    
-    Dimension(Class<?> type, SuccessorOrder<?> order, Class<? extends Range> rangeType, Range<?,?,?> emptyRange, Range<?,?,?> fullRange) {
-      this.type=type;
-      this.order=order;
-      this.rangeType=rangeType;
-      this.emptyRange=emptyRange;
-      this.fullRange=fullRange;
-    }
-    
-    @Override public Class<?> type() {return type;}
-    @Override public SuccessorOrder order() {return order;}
-    @Override public Class<? extends Range> rangeType() {return rangeType;}
-    @Override public Range<?,?,?> emptyRange() {return emptyRange;}
-    @Override public Range<?,?,?> fullRange() {return fullRange;}
-  };
     
   Key(Object[] fields) {
-    super(Dimension.BASIS, fields);
+    super(KeyDimension.BASIS, fields);
   }
   
   public Key(Bytes row, Bytes family, Bytes qualifier, Bytes visibility, long timestamp, boolean deletion) {
@@ -74,12 +49,7 @@ public final class Key extends Product.Tuple<Key> {
       deletion
     });
   }
-  
-  @Override
-  protected Key construct(Object[] fields) {
-    return new Key(fields);
-  }
-  
+    
   public static class Builder {
     private Bytes row=Bytes.EMPTY;
     private Bytes family=Bytes.EMPTY;
@@ -88,10 +58,20 @@ public final class Key extends Product.Tuple<Key> {
     private Long timestamp;
     private boolean deleted=false;
     
+    public Builder() {}
+    public Builder(Bytes row, Bytes family, Bytes qualifier, Bytes visibility, Long timestamp, boolean deleted) {
+      this.row=row;
+      this.family=family;
+      this.qualifier=qualifier;
+      this.visibility=visibility;
+      this.timestamp=timestamp;
+      this.deleted=deleted;
+    }
+    
     public Builder row(Bytes row) {
       this.row=row;
       return this;
-    }
+    }    
     public Builder family(Bytes family) {
       this.family=family;
       return this;
@@ -112,37 +92,52 @@ public final class Key extends Product.Tuple<Key> {
       this.deleted=deleted;
       return this;
     }
+    
+    public Builder row(String row) {return row(Bytes.copyOf(row));}
+    public Builder family(String family) {return family(Bytes.copyOf(family));}
+    public Builder qualifier(String qualifier) {return qualifier(Bytes.copyOf(qualifier));}
+    public Builder visibility(String visibility) {return visibility(Bytes.copyOf(visibility));}
+    
     public Key build() {
       return new Key(row, family, qualifier, visibility, timestamp, deleted);
     }
   }
   
-  public Object get(Dimension dim) {
+  public static Builder builder() {
+    return new Builder();
+  }
+  
+  /** Construct a new key that's a copy of this key, perhaps with some changes. */
+  public Builder rebuildWith() {
+    return new Builder(getRow(), getFamily(), getQualifier(), getVisibility(), getTimestamp(), isDeleted());
+  }
+  
+  public Object get(KeyDimension dim) {
     return get(dim.ordinal());
   }
   
   public Bytes getRow() {
-    return (Bytes)get(Dimension.ROW);
+    return (Bytes)get(KeyDimension.ROW);
   }
   
   public Bytes getFamily() {
-    return (Bytes)get(Dimension.FAMILY);
+    return (Bytes)get(KeyDimension.FAMILY);
   }
   
   public Bytes getQualifier() {
-    return (Bytes)get(Dimension.QUALIFIER);
+    return (Bytes)get(KeyDimension.QUALIFIER);
   }
   
   public Bytes getVisibility() {
-    return (Bytes)get(Dimension.VISIBILITY);
+    return (Bytes)get(KeyDimension.VISIBILITY);
   }
   
   public long getTimestamp() {
-    return (Long)get(Dimension.TIMESTAMP);
+    return (Long)get(KeyDimension.TIMESTAMP);
   }
   
   public boolean isDeleted() {
-    return (boolean)get(Dimension.DELETION);
+    return (boolean)get(KeyDimension.DELETION);
   }
   
   @Override
@@ -151,65 +146,25 @@ public final class Key extends Product.Tuple<Key> {
             getRow(), getFamily(), getQualifier(), getVisibility(), getTimestamp(), isDeleted());
   }
   
-  static class Box extends Product.Box<Key, Box, Set> {
-    public static final Box EMPTY=new Box(new Range[]{
-      Bytes.Range.EMPTY, 
-      Bytes.Range.EMPTY,
-      Bytes.Range.EMPTY,
-      Bytes.Range.EMPTY, 
-      Timestamp.Range.EMPTY, 
-      DeletionMarker.Range.EMPTY});
-    public static final Box ALL=new Box(new Range[]{
-      Bytes.Range.ALL, 
-      Bytes.Range.ALL, 
-      Bytes.Range.ALL, 
-      Bytes.Range.ALL, 
-      Timestamp.Range.ALL, 
-      DeletionMarker.Range.ALL});
-    Box(Range[] projections) {
-      super(Dimension.BASIS, projections);
-    }
-    
-    @Override
-    protected Box constructBox(Range[] projections) {
-      return new Box(projections);
-    }
-
-    @Override
-    protected Key constructTuple(Object[] fields) {
-      return new Key(fields);
-    }
-    
-    @Override
-    protected Set constructSet(java.util.Set<Box> boxes) {
-      return new Set(boxes);
-    }    
+  @Override
+  protected Key construct(Object[] fields) {
+    return new Key(fields);
   }
   
-  public static class Set extends Product.BoxSet<Key, Box, Set> {
-    public static final Set EMPTY=new Set(Collections.EMPTY_SET);
-    public static final Set ALL=new Set(Collections.singleton(Box.ALL));
-    
-    Set(java.util.Set<Box> boxes) {
-      super(Dimension.BASIS, boxes);
+  public static class Range extends org.apache.accumulo.api.data.impl.Range<Key, Range, RangeSet> {
+    public Range(Key lowerBound, Key upperBound) {
+      super(lowerBound, upperBound, Key.ORDER);
     }
     
-    @Override
-    protected Set constructSet(java.util.Set<Box> boxes) {
-      return new Set(boxes);
+    @Override protected Range construct(Key lowerBound, Key upperBound) {return new Range(lowerBound, upperBound);}
+    @Override protected RangeSet constructSet(SortedSet<Key> breakPoints) {return new RangeSet(breakPoints);}
+  }
+  
+  public static class RangeSet extends org.apache.accumulo.api.data.impl.RangeSet<Key, Range, RangeSet> {
+    RangeSet(SortedSet<Key> breakPoints) {
+      super(breakPoints, Key.ORDER);
     }
-    
-    @Override
-    protected Box constructBox(Range[] projections) {
-      return new Box(projections);
-    }
-    
-    public Bytes.RangeSet projectToRow() {
-      return (Bytes.RangeSet)projectTo(Dimension.ROW.ordinal());      
-    }
-    
-    public Bytes.RangeSet projectToFamily() {
-      return (Bytes.RangeSet)projectTo(Dimension.FAMILY.ordinal());
-    }
+    @Override protected RangeSet construct(SortedSet<Key> breakPoints) {return new RangeSet(breakPoints);}
+    @Override protected Range constructRange(Key lowerBound, Key upperBound) {return new Range(lowerBound, upperBound);}
   }
 }

@@ -16,6 +16,7 @@
  */
 package org.apache.accumulo.api.data;
 
+import org.apache.accumulo.api.data.impl.SuccessorOrder;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
@@ -321,11 +322,11 @@ public final class Bytes implements Comparable<Bytes> {
     return this.length() - rhs.length();
   }
 
-  public static class Range extends org.apache.accumulo.api.data.Range<Bytes, Range, RangeSet> {
+  public static class Range extends org.apache.accumulo.api.data.impl.Range<Bytes, Range, RangeSet> {
     public static final Range EMPTY = new Range(Bytes.EMPTY, Bytes.EMPTY);
     public static final Range ALL = new Range(Bytes.ORDER.minimumValue(), null);
 
-    protected Range(Bytes lowerBound, Bytes upperBound) {
+    Range(Bytes lowerBound, Bytes upperBound) {
       super(lowerBound, upperBound, Bytes.ORDER);
     }
 
@@ -340,11 +341,11 @@ public final class Bytes implements Comparable<Bytes> {
     }
   }
 
-  public static class RangeSet extends org.apache.accumulo.api.data.RangeSet<Bytes, Range, RangeSet> {
+  public static class RangeSet extends org.apache.accumulo.api.data.impl.RangeSet<Bytes, Range, RangeSet> {
     public static final RangeSet EMPTY=new RangeSet(Collections.emptySortedSet());
     public static final RangeSet ALL=new RangeSet(new TreeSet<>(Collections.singleton(Bytes.EMPTY)));
     
-    protected RangeSet(SortedSet<Bytes> breakPoints) {
+    RangeSet(SortedSet<Bytes> breakPoints) {
       super(breakPoints, Bytes.ORDER);
     }
 

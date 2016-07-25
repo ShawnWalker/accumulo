@@ -16,147 +16,177 @@
  */
 package org.apache.accumulo.api.data;
 
+import org.apache.accumulo.api.data.impl.KeySet;
+import org.apache.accumulo.api.data.impl.Range;
 import java.util.Arrays;
 import java.util.Objects;
-import org.apache.accumulo.api.data.Key.Dimension;
+import org.apache.accumulo.api.data.impl.KeyDimension;
+import org.apache.accumulo.api.data.impl.Timestamp;
 
-/** Utility class for constructing instances of {@link Key.Set}. */
+/** 
+ * Utility class for constructing instances of {@link Key.KeySet}. 
+ */
 public class Query {
+  /** Match any key. */
+  public static KeySet any() {
+    return KeySet.ALL;
+  }
+  
   /** Scan over only those keys matching all conditions. */
-  public static Key.Set and(Iterable<Key.Set> keySets) {
-    Key.Set result=Key.Set.ALL;
-    for (Key.Set keySet:keySets) {
+  public static KeySet and(Iterable<KeySet> keySets) {
+    KeySet result=KeySet.ALL;
+    for (KeySet keySet:keySets) {
       result=result.intersectionWith(keySet);
     }
     return result;
   }
   
   /** Scan over only those keys matching all conditions. */
-  public static Key.Set and(Key.Set... keySets) {
+  public static KeySet and(KeySet... keySets) {
     return and(Arrays.asList(keySets));
   }
   
   /** Scan over those keys matching any conditions. */
-  public static Key.Set or(Iterable<Key.Set> keySets) {
-    Key.Set result=Key.Set.EMPTY;
-    for (Key.Set keySet:keySets) {
+  public static KeySet or(Iterable<KeySet> keySets) {
+    KeySet result=KeySet.EMPTY;
+    for (KeySet keySet:keySets) {
       result=result.unionWith(keySet);
     }
     return result;
   }
   
   /** Scan over those keys matching any conditions. */
-  public static Key.Set or(Key.Set... keySets) {
+  public static KeySet or(KeySet... keySets) {
     return or(Arrays.asList(keySets));
   }
   
   /** 
-   * Return the inverse of the specified set.  Note that the implementation of this is very expensive, and so should
-   * be used sparingly.
+   * Return the inverse of the specified set.
    */
-  public static Key.Set not(Key.Set keySet) {
+  public static KeySet not(KeySet keySet) {
     return keySet.complement();
   }
   
   /** Construct a cylinder; that is, an object who's projection onto all axes except the specified axis is full. */
-  protected static Key.Set cylinder(Dimension dim, Range<?,?,?> range) {
-    Range[] projections=Arrays.copyOf(Key.Box.ALL.projections, Key.Box.ALL.projections.length);
+  static KeySet cylinder(KeyDimension dim, Range<?,?,?> range) {
+    Range[] projections=Arrays.copyOf(KeyBox.ALL.getProjections(), KeyBox.ALL.getProjections().length);
     projections[dim.ordinal()]=range;
-    return new Key.Box(projections).asSet();
+    return new KeyBox(projections).asSet();
   }
   
-  public static final BytesQuery ROW=new BytesQuery(Dimension.ROW);
-  public static final BytesQuery FAMILY=new BytesQuery(Dimension.FAMILY);
-  public static final BytesQuery QUALIFIER=new BytesQuery(Dimension.QUALIFIER);
-  public static final BytesQuery VISIBILITY=new BytesQuery(Dimension.VISIBILITY);
-  public static final RangeQuery<Long, Timestamp.Range> TIMESTAMP=new RangeQuery<Long, Timestamp.Range>(Timestamp.ORDER) {
-    @Override
-    protected Key.Set cylinder(Long begin, Long end) {
-      return Query.cylinder(Dimension.TIMESTAMP, new Timestamp.Range(begin, end));
-    }
-  };
-  public static final RangeQuery<Boolean, DeletionMarker.Range> DELETION=new RangeQuery<Boolean, DeletionMarker.Range>(DeletionMarker.ORDER) {
-    @Override
-    protected Key.Set cylinder(Boolean begin, Boolean end) {
-      return Query.cylinder(Dimension.DELETION, new DeletionMarker.Range(begin, end));
-    }
-  };
+  public static final BytesQuery ROW=new BytesQuery(KeyDimension.ROW);
+  public static final BytesQuery FAMILY=new BytesQuery(KeyDimension.FAMILY);
+  public static final BytesQuery QUALIFIER=new BytesQuery(KeyDimension.QUALIFIER);
+  public static final BytesQuery VISIBILITY=new BytesQuery(KeyDimension.VISIBILITY);
           
-  static abstract class RangeQuery<T, RangeType extends Range<T,?,?>> {
-    private final SuccessorOrder<T> order;
-    RangeQuery(SuccessorOrder<T> order) {
-      this.order=order;
+  public static class BytesQuery {
+    //
+    // Singleton
+    //
+    public KeySet equalTo(Bytes value) {
+      return cylinder(Objects.requireNonNull(value), Bytes.ORDER.successor(value));
     }
-    /** Construct a cylinder in the appropriate dimension on the given range endpoints. */
-    protected abstract Key.Set cylinder(T begin, T end);
+    public KeySet equalTo(String value) {return equalTo(Bytes.copyOf(value));}
+    public KeySet eq(Bytes value) {return equalTo(value);}
+    public KeySet eq(String value) {return equalTo(Bytes.copyOf(value));}
     
-    /** The specified field exactly equals {@code value}. */
-    public Key.Set equalTo(T value) {
-      return cylinder(Objects.requireNonNull(value), order.successor(value));
+    //
+    // Rays.
+    //    
+    public KeySet lessThan(Bytes value) {
+      return cylinder(Bytes.ORDER.minimumValue(), Objects.requireNonNull(value));
     }
-    
-    /** The specified field exactly equals {@code value}. */
-    public Key.Set eq(T value) {return equalTo(value);}
+    public KeySet lessThanOrEqualTo(Bytes value) {
+      return cylinder(Bytes.ORDER.minimumValue(), Bytes.ORDER.successor(Objects.requireNonNull(value)));
+    }
+    public KeySet greaterThan(Bytes value) {
+      return cylinder(Bytes.ORDER.successor(Objects.requireNonNull(value)), null);
+    }
+    public KeySet greaterThanOrEqualTo(Bytes value) {
+      return cylinder(Objects.requireNonNull(value), null);
+    }
 
-    /** The specified field is smaller than {@code value}. */
-    public Key.Set lessThan(T value) {
-      return cylinder(order.minimumValue(), Objects.requireNonNull(value));
-    }
+    public KeySet lessThan(String value) {return lessThan(Bytes.copyOf(value));}
+    public KeySet lessThanOrEqualTo(String value) {return lessThanOrEqualTo(Bytes.copyOf(value));}
+    public KeySet greaterThan(String value) {return greaterThan(Bytes.copyOf(value));}
+    public KeySet greaterThanOrEqualTo(String value) {return greaterThan(Bytes.copyOf(value));}
     
-    public Key.Set lt(T value) {return lessThan(value);}
-    
-    public Key.Set lessThanOrEqualTo(T value) {
-      return cylinder(order.minimumValue(), order.successor(Objects.requireNonNull(value)));
-    }
-    
-    public Key.Set lte(T value) {return lessThanOrEqualTo(value);}
-    
-    public Key.Set greaterThan(T value) {
-      return cylinder(Objects.requireNonNull(order.successor(value)), null);
-    }
-    
-    public Key.Set gt(T value) {return greaterThan(value);}
-    
-    public Key.Set greaterThanOrEqualTo(T value) {
-      return cylinder(Objects.requireNonNull(order.successor(value)), null);
-    }
-    public Key.Set gte(T value) {return greaterThanOrEqualTo(value);};
+    public KeySet lt(Bytes value) {return lessThan(value);}
+    public KeySet lt(String value) {return lessThan(value);}
+    public KeySet lte(Bytes value) {return lessThanOrEqualTo(value);}
+    public KeySet lte(String value) {return lessThanOrEqualTo(value);}
+    public KeySet gt(Bytes value) {return greaterThan(value);}
+    public KeySet gt(String value) {return greaterThan(value);}
+    public KeySet gte(Bytes value) {return greaterThanOrEqualTo(value);};
+    public KeySet gte(String value) {return greaterThanOrEqualTo(value);};
+
+    //
+    // Intervals.
+    //
     
     /** Equivalent to {@code and(greaterThan(lowerBound), lessThan(upperBound))}. */
-    public Key.Set strictlyBetween(T lowerBound, T upperBound) {
-      return cylinder(Objects.requireNonNull(order.successor(lowerBound)), upperBound);
+    public KeySet betweenExclusive(Bytes lowerBound, Bytes upperBound) {
+      return cylinder(Objects.requireNonNull(Bytes.ORDER.successor(lowerBound)), upperBound);
+    }
+    
+    /** Equivalent to {@code and(greaterThan(lowerBound), lessThan(upperBound))}. */
+    public KeySet betweenExclusive(String lowerBound, String upperBound) {
+      return betweenExclusive(Bytes.copyOf(lowerBound), Bytes.copyOf(upperBound));
     }
     
     /** Equivalent to {@code and(greaterThanOrEqualTo(lowerBound), lessThanOrEqualTo(upperBound))}. */
-    public Key.Set within(T lowerBound, T upperBound) {
-      return cylinder(lowerBound, order.successor(Objects.requireNonNull(upperBound)));
+    public KeySet betweenInclusive(Bytes lowerBound, Bytes upperBound) {
+      return cylinder(lowerBound, Bytes.ORDER.successor(Objects.requireNonNull(upperBound)));
+    }
+    
+    /** Equivalent to {@code and(greaterThanOrEqualTo(lowerBound), lessThanOrEqualTo(upperBound))}. */
+    public KeySet betweenInclusive(String lowerBound, String upperBound) {
+      return betweenInclusive(Bytes.copyOf(lowerBound), Bytes.copyOf(upperBound));
     }
     
     /** Equivalent to {@code and(greaterThanOrEqualTo(lowerBound), lessThan(upperBound))}. */
-    public Key.Set closedOpen(T lowerBound, T upperBound) {
+    public KeySet closedOpen(Bytes lowerBound, Bytes upperBound) {
       return cylinder(Objects.requireNonNull(lowerBound), Objects.requireNonNull(upperBound));
+    }
+
+    /** Equivalent to {@code and(greaterThanOrEqualTo(lowerBound), lessThan(upperBound))}. */
+    public KeySet closedOpen(String lowerBound, String upperBound) {
+      return closedOpen(Bytes.copyOf(lowerBound), Bytes.copyOf(upperBound));
     }
     
     /** Equivalent to {@code and(greaterThan(lowerBound), lessThanOrEqualTo(upperBound))}. */
-    public Key.Set openClosed(T lowerBound, T upperBound) {
-      return cylinder(Objects.requireNonNull(order.successor(lowerBound)), order.successor(Objects.requireNonNull(upperBound)));
+    public KeySet openClosed(Bytes lowerBound, Bytes upperBound) {
+      return cylinder(Objects.requireNonNull(Bytes.ORDER.successor(lowerBound)), Bytes.ORDER.successor(Objects.requireNonNull(upperBound)));
     }
-  }
-  
-  public static class BytesQuery extends RangeQuery<Bytes, Bytes.Range> {
-    private final Dimension dim;
-    BytesQuery(Dimension dim) {
-      super(Bytes.ORDER);
+    
+    /** Equivalent to {@code and(greaterThan(lowerBound), lessThanOrEqualTo(upperBound))}. */
+    public KeySet openClosed(String lowerBound, String upperBound) {
+      return openClosed(Bytes.copyOf(lowerBound), Bytes.copyOf(upperBound));
+    }
+    
+    //
+    // Misc.
+    //
+    public KeySet startsWith(Bytes prefix) {
+      return cylinder(Objects.requireNonNull(prefix), prefixEnd(prefix));
+    }
+    public KeySet startsWith(String prefix) {return startsWith(Bytes.copyOf(prefix));}
+    
+    //
+    // Impl.
+    //
+    
+    protected final KeyDimension dim;
+    private BytesQuery(KeyDimension dim) {
       this.dim=dim;
     }
     
-    @Override
-    protected Key.Set cylinder(Bytes begin, Bytes end) {
+    protected KeySet cylinder(Bytes begin, Bytes end) {
       return Query.cylinder(dim, new Bytes.Range(begin, end));
     }
     
     /** Calculate the {@link Bytes} which is just larger than all byte strings starting with {@code prefix}. */
-    private static Bytes prefixEnd(Bytes prefix) {
+    protected static Bytes prefixEnd(Bytes prefix) {
       byte[] work=prefix.toByteArray();
       int endPos;
       for (endPos=work.length;endPos>0;--endPos) {
@@ -166,9 +196,69 @@ public class Query {
         }
       }
       return endPos==0?null:Bytes.wrap(work, 0, endPos);
+    }    
+  }
+  
+  /** 
+   * For clarity, we provide query operators matching natural ordering of long, despite the fact that timestamps are
+   * internally ordered in reverse.
+   */
+  public static class TimestampQuery {
+    protected KeySet cylinder(long end, Long start) {
+      return Query.cylinder(KeyDimension.TIMESTAMP, new Timestamp.Range(end, start));
     }
-    public Key.Set startsWith(Bytes prefix) {
-      return cylinder(Objects.requireNonNull(prefix), prefixEnd(prefix));
+    
+    //
+    // Singleton
+    //
+    public KeySet equalTo(long timestamp) {
+      return cylinder(timestamp, Timestamp.ORDER.successor(timestamp));
+    }    
+    public KeySet eq(long timestamp) {return equalTo(timestamp);}
+    
+    //
+    // Rays
+    //
+    public KeySet lessThan(long timestamp) {
+      return cylinder(Objects.requireNonNull(Timestamp.ORDER.successor(timestamp)), null);
+    }
+    public KeySet lessThanOrEqualTo(long timestamp) {
+      return cylinder(timestamp, null);
+    }
+    public KeySet greaterThan(long timestamp) {
+      return cylinder(Timestamp.ORDER.minimumValue(), timestamp);
+    }
+    public KeySet greaterThanOrEqualTo(long timestamp) {
+      return cylinder(Timestamp.ORDER.minimumValue(), Timestamp.ORDER.successor(timestamp));
+    }
+
+    public KeySet lt(long timestamp) {return lessThan(timestamp);}
+    public KeySet lte(long timestamp) {return lessThanOrEqualTo(timestamp);}
+    public KeySet gt(long timestamp) {return greaterThan(timestamp);}
+    public KeySet gte(long timestamp) {return greaterThanOrEqualTo(timestamp);}
+    
+    //
+    // Intervals
+    //
+    
+    /** Equivalent to {@code and(greaterThan(lowerBound), lessThan(upperBound))}. */
+    public KeySet betweenExclusive(long start, long end) {
+      return cylinder(Timestamp.ORDER.successor(end), start);
+    }
+
+    /** Equivalent to {@code and(greaterThanOrEqualTo(lowerBound), lessThanOrEqualTo(upperBound))}. */
+    public KeySet betweenInclusive(long start, long end) {
+      return cylinder(end, Timestamp.ORDER.successor(start));
+    }
+    
+    /** Equivalent to {@code and(greaterThanOrEqualTo(lowerBound), lessThan(upperBound))}. */
+    public KeySet closedOpen(long start, long end) {
+      return cylinder(Timestamp.ORDER.successor(end), Timestamp.ORDER.successor(start));
+    }
+    
+    /** Equivalent to {@code and(greaterThan(lowerBound), lessThanOrEqualTo(upperBound))}. */
+    public KeySet openClosed(long start, long end) {
+      return cylinder(end, start);
     }
   }
 }

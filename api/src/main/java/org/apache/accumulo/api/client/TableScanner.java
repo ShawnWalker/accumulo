@@ -19,12 +19,13 @@ package org.apache.accumulo.api.client;
 import java.util.stream.Stream;
 import org.apache.accumulo.api.data.Cell;
 import org.apache.accumulo.api.data.Key;
+import org.apache.accumulo.api.data.impl.KeySet;
 import org.apache.accumulo.api.security.Authorizations;
 
 public interface TableScanner extends Stream<Cell> {
   public static interface Builder {
     /** Specify set of keys to scan. Default is to scan over all keys. */
-    public Builder over(Key.Set keys);
+    public Builder over(KeySet keys);
     
     /** Specify isolation level for scan. Default is {@link IsolationLevel#NONE}. */
     public Builder withIsolation(IsolationLevel isolation);

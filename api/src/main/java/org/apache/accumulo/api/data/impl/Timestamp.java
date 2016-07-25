@@ -14,7 +14,7 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.accumulo.api.data;
+package org.apache.accumulo.api.data.impl;
 
 import java.util.Collections;
 import java.util.SortedSet;
@@ -50,11 +50,11 @@ public class Timestamp {
     }
   };
 
-  public static class Range extends org.apache.accumulo.api.data.Range<Long, Range, RangeSet> {
+  public static class Range extends org.apache.accumulo.api.data.impl.Range<Long, Range, RangeSet> {
     public static final Range EMPTY = new Range(Long.MAX_VALUE, Long.MAX_VALUE);
     public static final Range ALL = new Range(Long.MAX_VALUE, null);
 
-    Range(Long lowerBound, Long upperBound) {
+    public Range(Long lowerBound, Long upperBound) {
       super(lowerBound, upperBound, ORDER);
     }
 
@@ -69,7 +69,7 @@ public class Timestamp {
     }
   }
 
-  public static class RangeSet extends org.apache.accumulo.api.data.RangeSet<Long, Range, RangeSet> {
+  public static class RangeSet extends org.apache.accumulo.api.data.impl.RangeSet<Long, Range, RangeSet> {
     public static final RangeSet EMPTY=new RangeSet(Collections.emptySortedSet());
     public static final RangeSet ALL=new RangeSet(new TreeSet<>(Collections.singleton(ORDER.minimumValue())));
     

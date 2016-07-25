@@ -16,26 +16,28 @@
  */
 package org.apache.accumulo.api.data;
 
+import org.apache.accumulo.api.data.impl.KeySet;
 import java.util.HashSet;
 import java.util.Set;
 import static org.apache.accumulo.api.data.Query.FAMILY;
 import static org.apache.accumulo.api.data.Query.ROW;
-import static org.apache.accumulo.api.data.Query.and;
 import static org.apache.accumulo.api.data.Query.not;
-import static org.apache.accumulo.api.data.Query.or;
 import org.junit.Test;
 import org.junit.Assert;
+import static org.apache.accumulo.api.data.Query.and;
+import static org.apache.accumulo.api.data.Query.or;
+import static org.apache.accumulo.api.data.Query.and;
+import static org.apache.accumulo.api.data.Query.or;
 
 public class QueryTest {
-  private static final Key.Set QUERY=
-    and(
-      or(
-          FAMILY.eq(Bytes.copyOf("fam1")), FAMILY.eq(Bytes.copyOf("fam2")), FAMILY.eq(Bytes.copyOf("fam3")), FAMILY.eq(Bytes.copyOf("fam4"))
+  private static final KeySet QUERY=
+    and(or(
+          FAMILY.eq("fam1"), FAMILY.eq("fam2"), FAMILY.eq("fam3"), FAMILY.eq("fam4")
       ),
-      ROW.within(Bytes.copyOf("1"), Bytes.copyOf("2")),
-      ROW.gt(Bytes.copyOf("1")),
-      ROW.lte(Bytes.copyOf("2")),
-      not(ROW.eq(Bytes.copyOf("2")))
+      ROW.betweenInclusive("1", "2"),
+      ROW.gt("1"),
+      ROW.lte("2"),
+      not(ROW.eq("1a"))
     );
   
   @Test
@@ -49,22 +51,41 @@ public class QueryTest {
     }
     Assert.assertEquals(4, families.size());
     for (int i=0;i<4;++i) {
-      Assert.assertTrue(families.contains(Bytes.copyOf("fam"+(i+1))));
+      Assert.assertTrue(families.contains(("fam"+(i+1))));
     }
   }
   
   @Test
   public void testContains() {
-    Assert.assertTrue(QUERY.contains(new Key.Builder().row(Bytes.copyOf("123")).family(Bytes.copyOf("fam3")).qualifier(Bytes.EMPTY).timestamp(0).build()));
-    Assert.assertTrue(!QUERY.contains(new Key.Builder().row(Bytes.copyOf("123")).family(Bytes.copyOf("fam")).qualifier(Bytes.EMPTY).timestamp(0).build()));
-    Assert.assertTrue(!QUERY.contains(new Key.Builder().row(Bytes.copyOf("223")).family(Bytes.copyOf("fam3")).qualifier(Bytes.EMPTY).timestamp(0).build()));
+    Assert.assertTrue(QUERY.contains(new Key.Builder().row(("123")).family(("fam3")).qualifier(Bytes.EMPTY).timestamp(0).build()));
+    Assert.assertTrue(!QUERY.contains(new Key.Builder().row(("123")).family(("fam")).qualifier(Bytes.EMPTY).timestamp(0).build()));
+    Assert.assertTrue(!QUERY.contains(new Key.Builder().row(("223")).family(("fam3")).qualifier(Bytes.EMPTY).timestamp(0).build()));
+  }
+  
+  @Test
+  public void testNextSeek() {
+    Key k=new Key.Builder().row(("123")).family(("fam")).qualifier(Bytes.EMPTY).timestamp(0).build();
+    Key ns=QUERY.nextSeek(k);
+    Assert.assertNotEquals(k, ns);
+    Assert.assertTrue(k.compareTo(ns)<0);
   }
   
   @Test
   public void testNot() {
-    Key.Set negation=not(QUERY);
+    KeySet negation=not(QUERY);
     Assert.assertTrue(!negation.isEmpty());
     Assert.assertTrue(and(QUERY, negation).isEmpty());
     Assert.assertTrue(negation.contains(negation.first()));
+  }
+  
+  @Test
+  public void testEquals() {
+    KeySet left=or(
+            and(ROW.lt(("1")), FAMILY.eq(("fam"))), 
+            and(ROW.gte(("1")), FAMILY.eq(("fam"))));
+    KeySet right=FAMILY.eq(("fam"));
+    
+    Assert.assertEquals(left, right);
+    Assert.assertEquals(left.hashCode(), right.hashCode());
   }
 }
