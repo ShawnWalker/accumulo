@@ -168,6 +168,7 @@ import org.apache.commons.cli.MissingOptionException;
 import org.apache.commons.cli.Option;
 import org.apache.commons.cli.Options;
 import org.apache.commons.cli.ParseException;
+import org.apache.commons.configuration.ConfigurationException;
 import org.apache.commons.vfs2.FileSystemException;
 import org.apache.hadoop.fs.Path;
 import org.apache.log4j.Level;
@@ -241,9 +242,8 @@ public class Shell extends ShellOptions implements KeywordExecutable {
     }
   }
 
-  public Shell() throws IOException {
-    this(new ConsoleReader());
-  }
+  // no arg constructor should do minimal work since its used in Main ServiceLoader
+  public Shell() {}
 
   public Shell(ConsoleReader reader) {
     super();
@@ -254,8 +254,12 @@ public class Shell extends ShellOptions implements KeywordExecutable {
    * Configures the shell using the provided options. Not for client use.
    *
    * @return true if the shell was successfully configured, false otherwise.
+   * @throws IOException
+   *           if problems occur creating the ConsoleReader
    */
-  public boolean config(String... args) {
+  public boolean config(String... args) throws IOException {
+    if (this.reader == null)
+      this.reader = new ConsoleReader();
     ShellOptionsJC options = new ShellOptionsJC();
     JCommander jc = new JCommander();
 
@@ -453,11 +457,13 @@ public class Shell extends ShellOptions implements KeywordExecutable {
       instanceName = options.getZooKeeperInstanceName();
       hosts = options.getZooKeeperHosts();
     }
+    final ClientConfiguration clientConf;
     try {
-      instance = getZooInstance(instanceName, hosts, options.getClientConfiguration());
-    } catch (Exception e) {
+      clientConf = options.getClientConfiguration();
+    } catch (ConfigurationException | FileNotFoundException e) {
       throw new IllegalArgumentException("Unable to load client config from " + options.getClientConfigFile(), e);
     }
+    instance = getZooInstance(instanceName, hosts, clientConf);
   }
 
   /**
@@ -584,7 +590,7 @@ public class Shell extends ShellOptions implements KeywordExecutable {
   }
 
   public static void main(String args[]) throws IOException {
-    new Shell().execute(args);
+    new Shell(new ConsoleReader()).execute(args);
   }
 
   public int start() throws IOException {

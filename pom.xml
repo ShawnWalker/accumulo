@@ -217,7 +217,7 @@
       <dependency>
         <groupId>commons-configuration</groupId>
         <artifactId>commons-configuration</artifactId>
-        <version>1.10</version>
+        <version>1.6</version>
       </dependency>
       <dependency>
         <groupId>commons-httpclient</groupId>
@@ -744,7 +744,7 @@
           <!-- overridden version from ASF-17 parent pom -->
           <version>2.5.3</version>
           <configuration>
-            <arguments>-P !autoformat,thrift,assemble,docs,sunny -Dtimeout.factor=2 ${extraReleaseArgs}</arguments>
+            <arguments>-P !autoformat,thrift,sunny -Dtimeout.factor=2 ${extraReleaseArgs}</arguments>
             <autoVersionSubmodules>true</autoVersionSubmodules>
             <goals>clean deploy</goals>
             <preparationGoals>clean verify</preparationGoals>
@@ -834,6 +834,13 @@
               </requireMavenVersion>
             </rules>
           </configuration>
+          <dependencies>
+            <dependency>
+              <groupId>org.codehaus.mojo</groupId>
+              <artifactId>animal-sniffer-enforcer-rule</artifactId>
+              <version>1.15</version>
+            </dependency>
+          </dependencies>
         </plugin>
         <plugin>
           <!-- Allows us to get the apache-ds bundle artifacts -->
@@ -881,7 +888,8 @@
           <groupId>org.apache.rat</groupId>
           <artifactId>apache-rat-plugin</artifactId>
           <configuration>
-            <excludes>
+            <excludes combine.children="append">
+              <exclude>src/main/resources/META-INF/services/*</exclude>
               <exclude>nbproject/**</exclude>
               <exclude>nb-configuration.xml</exclude>
               <exclude>nbactions.xml</exclude>
@@ -910,10 +918,29 @@
         <artifactId>maven-enforcer-plugin</artifactId>
         <executions>
           <execution>
-            <id>enforce-mvn</id>
+            <id>enforce-basic-rules</id>
             <goals>
               <goal>enforce</goal>
             </goals>
+            <phase>validate</phase>
+          </execution>
+          <execution>
+            <id>enforce-java-signatures</id>
+            <goals>
+              <goal>enforce</goal>
+            </goals>
+            <phase>process-test-classes</phase>
+            <configuration>
+              <rules>
+                <checkSignatureRule implementation="org.codehaus.mojo.animal_sniffer.enforcer.CheckSignatureRule">
+                  <signature>
+                    <groupId>org.codehaus.mojo.signature</groupId>
+                    <artifactId>java18</artifactId>
+                    <version>1.0</version>
+                  </signature>
+                </checkSignatureRule>
+              </rules>
+            </configuration>
           </execution>
         </executions>
       </plugin>
@@ -1314,6 +1341,10 @@
         <skipITs>true</skipITs>
         <skipTests>true</skipTests>
       </properties>
+    </profile>
+    <profile>
+      <!-- set proper source assembly name with apache-release and don't attach here -->
+      <id>apache-release</id>
       <build>
         <pluginManagement>
           <plugins>

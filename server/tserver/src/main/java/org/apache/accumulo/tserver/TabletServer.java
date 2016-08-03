@@ -264,6 +264,9 @@ import com.google.inject.Injector;
 import com.google.inject.Stage;
 import javax.inject.Inject;
 import javax.inject.Singleton;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import org.apache.accumulo.core.tabletserver.thrift.TUnloadTabletGoal;
 
 @Singleton
 public class TabletServer extends AccumuloServerContext implements Runnable {
@@ -337,7 +340,7 @@ public class TabletServer extends AccumuloServerContext implements Runnable {
   private final WalStateManager walMarker;
 
   @Inject
-  private TabletServer(ServerConfigurationFactory confFactory, VolumeManager fs) {
+  public TabletServer(ServerConfigurationFactory confFactory, VolumeManager fs) throws IOException {
     super(confFactory);
     this.confFactory = confFactory;
     this.fs = fs;
@@ -1557,7 +1560,7 @@ public class TabletServer extends AccumuloServerContext implements Runnable {
     }
 
     @Override
-    public void unloadTablet(TInfo tinfo, TCredentials credentials, String lock, TKeyExtent textent, boolean save) {
+    public void unloadTablet(TInfo tinfo, TCredentials credentials, String lock, TKeyExtent textent, TUnloadTabletGoal goal, long requestTime) {
       try {
         checkPermission(credentials, lock, "unloadTablet");
       } catch (ThriftSecurityException e) {
@@ -1567,7 +1570,7 @@ public class TabletServer extends AccumuloServerContext implements Runnable {
 
       KeyExtent extent = new KeyExtent(textent);
 
-      resourceManager.addMigration(extent, new LoggingRunnable(log, new UnloadTabletHandler(extent, save)));
+      resourceManager.addMigration(extent, new LoggingRunnable(log, new UnloadTabletHandler(extent, goal, requestTime)));
     }
 
     @Override
@@ -1947,11 +1950,13 @@ public class TabletServer extends AccumuloServerContext implements Runnable {
 
   private class UnloadTabletHandler implements Runnable {
     private final KeyExtent extent;
-    private final boolean saveState;
+    private final TUnloadTabletGoal goalState;
+    private final long requestTimeSkew;
 
-    public UnloadTabletHandler(KeyExtent extent, boolean saveState) {
+    public UnloadTabletHandler(KeyExtent extent, TUnloadTabletGoal goalState, long requestTime) {
       this.extent = extent;
-      this.saveState = saveState;
+      this.goalState = goalState;
+      this.requestTimeSkew = requestTime - MILLISECONDS.convert(System.nanoTime(), NANOSECONDS);
     }
 
     @Override
@@ -1990,7 +1995,7 @@ public class TabletServer extends AccumuloServerContext implements Runnable {
       }
 
       try {
-        t.close(saveState);
+        t.close(!goalState.equals(TUnloadTabletGoal.DELETED));
       } catch (Throwable e) {
 
         if ((t.isClosing() || t.isClosed()) && e instanceof IllegalStateException) {
@@ -2011,12 +2016,18 @@ public class TabletServer extends AccumuloServerContext implements Runnable {
         TServerInstance instance = new TServerInstance(clientAddress, getLock().getSessionId());
         TabletLocationState tls = null;
         try {
-          tls = new TabletLocationState(extent, null, instance, null, null, false);
+          tls = new TabletLocationState(extent, null, instance, null, null, null, false);
         } catch (BadLocationStateException e) {
           log.error("Unexpected error ", e);
         }
-        log.debug("Unassigning " + tls);
-        TabletStateStore.unassign(TabletServer.this, tls, null);
+        if (!goalState.equals(TUnloadTabletGoal.SUSPENDED) || extent.isRootTablet()
+            || (extent.isMeta() && !getConfiguration().getBoolean(Property.MASTER_METADATA_SUSPENDABLE))) {
+          log.debug("Unassigning " + tls);
+          TabletStateStore.unassign(TabletServer.this, tls, null);
+        } else {
+          log.debug("Suspending " + tls);
+          TabletStateStore.suspend(TabletServer.this, tls, null, requestTimeSkew + MILLISECONDS.convert(System.nanoTime(), NANOSECONDS));
+        }
       } catch (DistributedStoreException ex) {
         log.warn("Unable to update storage", ex);
       } catch (KeeperException e) {
