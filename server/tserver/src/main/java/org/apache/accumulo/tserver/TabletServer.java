@@ -130,7 +130,6 @@ import org.apache.accumulo.core.tabletserver.thrift.TabletClientService;
 import org.apache.accumulo.core.tabletserver.thrift.TabletClientService.Iface;
 import org.apache.accumulo.core.tabletserver.thrift.TabletClientService.Processor;
 import org.apache.accumulo.core.tabletserver.thrift.TabletStats;
-import org.apache.accumulo.core.trace.DistributedTrace;
 import org.apache.accumulo.core.trace.Span;
 import org.apache.accumulo.core.trace.Trace;
 import org.apache.accumulo.core.trace.thrift.TInfo;
@@ -152,20 +151,17 @@ import org.apache.accumulo.fate.zookeeper.RetryFactory;
 import org.apache.accumulo.fate.zookeeper.ZooLock.LockLossReason;
 import org.apache.accumulo.fate.zookeeper.ZooLock.LockWatcher;
 import org.apache.accumulo.fate.zookeeper.ZooUtil.NodeExistsPolicy;
-import org.apache.accumulo.server.Accumulo;
 import org.apache.accumulo.server.AccumuloServerContext;
 import org.apache.accumulo.server.GarbageCollectionLogger;
 import org.apache.accumulo.server.ServerOpts;
 import org.apache.accumulo.server.TabletLevel;
 import org.apache.accumulo.server.client.ClientServiceHandler;
-import org.apache.accumulo.server.client.HdfsZooInstance;
 import org.apache.accumulo.server.conf.ServerConfigurationFactory;
 import org.apache.accumulo.server.conf.TableConfiguration;
 import org.apache.accumulo.server.data.ServerMutation;
 import org.apache.accumulo.server.fs.FileRef;
 import org.apache.accumulo.server.fs.VolumeManager;
 import org.apache.accumulo.server.fs.VolumeManager.FileType;
-import org.apache.accumulo.server.fs.VolumeManagerImpl;
 import org.apache.accumulo.server.log.SortedLogState;
 import org.apache.accumulo.server.log.WalStateManager;
 import org.apache.accumulo.server.log.WalStateManager.WalMarkerException;
@@ -259,13 +255,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.net.HostAndPort;
-import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
-import com.google.inject.Stage;
+import com.google.inject.name.Names;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import static java.util.concurrent.TimeUnit.MILLISECONDS;
 import static java.util.concurrent.TimeUnit.NANOSECONDS;
+import org.apache.accumulo.core.inject.LifecycleManager;
 import org.apache.accumulo.core.tabletserver.thrift.TUnloadTabletGoal;
 
 @Singleton
@@ -2915,29 +2911,18 @@ public class TabletServer extends AccumuloServerContext implements Runnable {
   }
 
   public static void main(String[] args) throws IOException {
+    Injector injector = null;
     try {
       ServerOpts opts = new ServerOpts();
       final String app = "tserver";
       opts.parseArgs(app, args);
       final String hostname = opts.getAddress();
 
-      SecurityUtil.serverLogin(SiteConfiguration.getInstance());
-      Accumulo.setupLogging(app);
-      final ServerConfigurationFactory conf = new ServerConfigurationFactory(HdfsZooInstance.getInstance());
-      final VolumeManager fs = VolumeManagerImpl.get();
-      Accumulo.init(fs, conf, app);
-
-      Injector injector = InjectorBuilder.newRoot().add(TabletServerModule.class).add(new AbstractModule() {
-        @Override
-        protected void configure() {
-          bind(ServerConfigurationFactory.class).toInstance(conf);
-          bind(VolumeManager.class).toInstance(fs);
-        }
-      }).build(Stage.PRODUCTION);
+      injector = InjectorBuilder.newRoot().add(TabletServerModule.class).bindInstance(Names.named("app"), String.class, app)
+          .bindInstance(Names.named("hostname"), String.class, hostname).build();
       final TabletServer server = injector.getInstance(TabletServer.class);
 
       server.config(hostname);
-      DistributedTrace.enable(hostname, app, conf.getConfiguration());
       if (UserGroupInformation.isSecurityEnabled()) {
         UserGroupInformation loginUser = UserGroupInformation.getLoginUser();
         loginUser.doAs(new PrivilegedExceptionAction<Void>() {
@@ -2954,7 +2939,7 @@ public class TabletServer extends AccumuloServerContext implements Runnable {
       log.error("Uncaught exception in TabletServer.main, exiting", ex);
       System.exit(1);
     } finally {
-      DistributedTrace.disable();
+      LifecycleManager.shutdown(injector);
     }
   }
 

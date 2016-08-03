@@ -36,14 +36,12 @@ import org.apache.accumulo.core.client.AccumuloSecurityException;
 import org.apache.accumulo.core.client.BatchWriter;
 import org.apache.accumulo.core.client.BatchWriterConfig;
 import org.apache.accumulo.core.client.Connector;
-import org.apache.accumulo.core.client.Instance;
 import org.apache.accumulo.core.client.IsolatedScanner;
 import org.apache.accumulo.core.client.MutationsRejectedException;
 import org.apache.accumulo.core.client.Scanner;
 import org.apache.accumulo.core.client.TableNotFoundException;
 import org.apache.accumulo.core.client.impl.Tables;
 import org.apache.accumulo.core.conf.Property;
-import org.apache.accumulo.core.conf.SiteConfiguration;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Mutation;
 import org.apache.accumulo.core.data.PartialKey;
@@ -65,7 +63,6 @@ import org.apache.accumulo.core.replication.ReplicationTable;
 import org.apache.accumulo.core.replication.ReplicationTableOfflineException;
 import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.core.security.thrift.TCredentials;
-import org.apache.accumulo.core.trace.DistributedTrace;
 import org.apache.accumulo.core.trace.ProbabilitySampler;
 import org.apache.accumulo.core.trace.Span;
 import org.apache.accumulo.core.trace.Trace;
@@ -79,15 +76,12 @@ import org.apache.accumulo.core.zookeeper.ZooUtil;
 import org.apache.accumulo.fate.zookeeper.ZooLock.LockLossReason;
 import org.apache.accumulo.fate.zookeeper.ZooLock.LockWatcher;
 import org.apache.accumulo.gc.replication.CloseWriteAheadLogReferences;
-import org.apache.accumulo.server.Accumulo;
 import org.apache.accumulo.server.AccumuloServerContext;
 import org.apache.accumulo.server.ServerConstants;
 import org.apache.accumulo.server.ServerOpts;
-import org.apache.accumulo.server.client.HdfsZooInstance;
 import org.apache.accumulo.server.conf.ServerConfigurationFactory;
 import org.apache.accumulo.server.fs.VolumeManager;
 import org.apache.accumulo.server.fs.VolumeManager.FileType;
-import org.apache.accumulo.server.fs.VolumeManagerImpl;
 import org.apache.accumulo.server.fs.VolumeUtil;
 import org.apache.accumulo.server.replication.proto.Replication.Status;
 import org.apache.accumulo.server.rpc.RpcWrapper;
@@ -95,7 +89,6 @@ import org.apache.accumulo.server.rpc.ServerAddress;
 import org.apache.accumulo.server.rpc.TCredentialsUpdatingWrapper;
 import org.apache.accumulo.server.rpc.TServerUtils;
 import org.apache.accumulo.server.rpc.ThriftServerType;
-import org.apache.accumulo.server.security.SecurityUtil;
 import org.apache.accumulo.server.tables.TableManager;
 import org.apache.accumulo.server.util.Halt;
 import org.apache.accumulo.server.util.TabletIterator;
@@ -111,13 +104,13 @@ import com.beust.jcommander.Parameter;
 import com.google.common.collect.Iterators;
 import com.google.common.collect.Maps;
 import com.google.common.net.HostAndPort;
-import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
-import com.google.inject.Stage;
+import com.google.inject.name.Names;
 import com.google.protobuf.InvalidProtocolBufferException;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.apache.accumulo.core.inject.InjectorBuilder;
+import org.apache.accumulo.core.inject.LifecycleManager;
 
 @Singleton
 public class SimpleGarbageCollector extends AccumuloServerContext implements Iface {
@@ -147,34 +140,21 @@ public class SimpleGarbageCollector extends AccumuloServerContext implements Ifa
   private GCStatus status = new GCStatus(new GcCycleStats(), new GcCycleStats(), new GcCycleStats(), new GcCycleStats());
 
   public static void main(String[] args) throws UnknownHostException, IOException {
-    SecurityUtil.serverLogin(SiteConfiguration.getInstance());
-    final String app = "gc";
-    Accumulo.setupLogging(app);
-    Instance instance = HdfsZooInstance.getInstance();
-    final ServerConfigurationFactory conf = new ServerConfigurationFactory(instance);
     log.info("Version " + Constants.VERSION);
-    log.info("Instance " + instance.getInstanceID());
-    final VolumeManager fs = VolumeManagerImpl.get();
-    Accumulo.init(fs, conf, app);
+
+    final String app = "gc";
     final Opts opts = new Opts();
     opts.parseArgs(app, args);
 
-    Injector injector = InjectorBuilder.newRoot().add(GarbageCollectorModule.class).add(new AbstractModule() {
-      @Override
-      protected void configure() {
-        bind(ServerConfigurationFactory.class).toInstance(conf);
-        bind(VolumeManager.class).toInstance(fs);
-        bind(Opts.class).toInstance(opts);
-      }
-    }).build(Stage.PRODUCTION);
+    Injector injector = InjectorBuilder.newRoot().add(GarbageCollectorModule.class).bindInstance(Names.named("app"), String.class, app)
+        .bindInstance(Names.named("hostname"), String.class, opts.getAddress()).bindInstance(Opts.class, opts).build();
 
     SimpleGarbageCollector gc = injector.getInstance(SimpleGarbageCollector.class);
 
-    DistributedTrace.enable(opts.getAddress(), app, conf.getConfiguration());
     try {
       gc.run();
     } finally {
-      DistributedTrace.disable();
+      LifecycleManager.shutdown(injector);
     }
   }
 

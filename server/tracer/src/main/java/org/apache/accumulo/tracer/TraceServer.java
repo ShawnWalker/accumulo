@@ -87,6 +87,7 @@ import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import org.apache.accumulo.core.inject.InjectorBuilder;
+import org.apache.accumulo.core.inject.LifecycleManager;
 
 @Singleton
 public class TraceServer implements Watcher {
@@ -361,26 +362,17 @@ public class TraceServer implements Watcher {
     ServerOpts opts = new ServerOpts();
     final String app = "tracer";
     opts.parseArgs(app, args);
-    Accumulo.setupLogging(app);
-    Instance instance = HdfsZooInstance.getInstance();
-    final ServerConfigurationFactory conf = new ServerConfigurationFactory(instance);
-    VolumeManager fs = VolumeManagerImpl.get();
-    Accumulo.init(fs, conf, app);
     final String hostname = opts.getAddress();
 
-    Injector injector = InjectorBuilder.newRoot().add(TraceServerModule.class).add(new AbstractModule() {
-      @Override
-      protected void configure() {
-        bind(ServerConfigurationFactory.class).toInstance(conf);
-        bind(String.class).annotatedWith(Names.named("hostname")).toInstance(hostname);
-      }
-    }).build(Stage.PRODUCTION);
+    Injector injector = InjectorBuilder.newRoot().add(TraceServerModule.class).bindInstance(Names.named("app"), String.class, app)
+        .bindInstance(Names.named("hostname"), String.class, hostname).build();
     TraceServer server = injector.getInstance(TraceServer.class);
     try {
       server.run();
     } finally {
       log.info("tracer stopping");
       ZooReaderWriter.getInstance().getZooKeeper().close();
+      LifecycleManager.shutdown(injector);
     }
   }
 

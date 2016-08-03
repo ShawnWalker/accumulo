@@ -16,25 +16,26 @@
  */
 package org.apache.accumulo.core.inject;
 
+import com.google.common.collect.ImmutableList;
 import com.google.inject.AbstractModule;
 import com.google.inject.Guice;
 import com.google.inject.Injector;
+import com.google.inject.Key;
 import com.google.inject.Module;
 import com.google.inject.Stage;
 import com.google.inject.matcher.Matchers;
+import com.google.inject.testing.fieldbinder.BoundFieldModule;
+import com.google.inject.util.Modules;
+import java.lang.annotation.Annotation;
 import java.util.AbstractSet;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import static java.util.stream.Collectors.toList;
 
 /**
  * Builder for an injector which respects {@code @Requires} annotations and allows substitution.
@@ -42,15 +43,12 @@ import static java.util.stream.Collectors.toList;
 public class InjectorBuilder {
   private final Set<Class<? extends Module>> specifiedModules;
   private final Set<Class<? extends Module>> removedModules;
-
   private final List<Module> additionalInstances;
-  private final Map<Class<? extends Module>,Class<? extends Module>> requestedOverrides;
 
   private InjectorBuilder() {
     this.specifiedModules = new HashSet<>();
     this.removedModules = new HashSet<>();
     this.additionalInstances = new ArrayList<>();
-    this.requestedOverrides = new HashMap<>();
   }
 
   /** Construct a new root injector which shares no common functionality with any other preexisting Injector. */
@@ -59,53 +57,49 @@ public class InjectorBuilder {
   }
 
   /** Add specific module instances to the {@code InjectorBuilder}. */
-  public InjectorBuilder addInstances(Collection<? extends Module> rawModules) {
-    this.additionalInstances.addAll(rawModules);
-    return this;
-  }
-
-  /** Add specific module instances to the {@code InjectorBuilder}. */
-  public InjectorBuilder add(Module... rawModules) {
-    return addInstances(Arrays.asList(rawModules));
-  }
-
-  /** Add modules to the builder for inclusion in the eventual {@link Injector}. */
-  public InjectorBuilder add(Collection<Class<? extends Module>> modules) {
-    specifiedModules.addAll(modules);
+  public InjectorBuilder addRaw(Module rawModule) {
+    this.additionalInstances.add(rawModule);
     return this;
   }
 
   /** Add modules to the builder for inclusion in the eventual {@link Injector}. */
-  public InjectorBuilder add(Class<? extends Module>... modules) {
-    return add(Arrays.asList(modules));
-  }
-
-  /** Remove modules from the builder. This is done after transitive closure is calculated. */
-  public InjectorBuilder remove(Collection<Class<? extends Module>> modules) {
-    this.removedModules.addAll(modules);
+  public InjectorBuilder add(Class<? extends Module> module) {
+    specifiedModules.add(module);
     return this;
   }
 
-  /** Remove modules from the builder. This is done after transitive closure is calculated. */
-  public InjectorBuilder remove(Class<? extends Module>... modules) {
-    return remove(Arrays.asList(modules));
+  /** Create a binding for a specific instance. */
+  public <T> InjectorBuilder bindInstance(Key<T> key, T instance) {
+    return addRaw(new AbstractModule() {
+      @Override
+      protected void configure() {
+        bind(key).toInstance(instance);
+      }
+    });
   }
 
-  /**
-   * Specify a module override. When the {@link Injector} is built, we will not include the {@code target} module, instead including the {@code replacement}
-   * module. This is done before transitive closure is calculated.
-   */
-  public InjectorBuilder override(Class<? extends Module> target, Class<? extends Module> replacement) {
-    requestedOverrides.put(target, replacement);
-    return this;
+  /** Create a binding for a specific instance. */
+  public <T> InjectorBuilder bindInstance(Class<T> clazz, T instance) {
+    return bindInstance(Key.get(clazz), instance);
+  }
+
+  /** Create a binding for a specific instance. */
+  public <T> InjectorBuilder bindInstance(Class<? extends Annotation> annotationClass, Class<T> clazz, T instance) {
+    return bindInstance(Key.get(clazz, annotationClass), instance);
+  }
+
+  /** Create a binding for a specific instance. */
+  public <T> InjectorBuilder bindInstance(Annotation annotation, Class<T> clazz, T instance) {
+    return bindInstance(Key.get(clazz, annotation), instance);
   }
 
   /**
    * Specify a module substitution. When the {@link Injector} is built, instead of instantiating the {@code target} module, instead insert the
-   * {@code substituation} module.
+   * {@code substitution} module.
    */
   public InjectorBuilder substitute(Class<? extends Module> target, Module substitution) {
-    return remove(target).add(substitution);
+    this.removedModules.add(target);
+    return addRaw(substitution);
   }
 
   /** Create an {@link Injector} with the given modules. */
@@ -115,38 +109,42 @@ public class InjectorBuilder {
 
   /** Create an {@link Injector} with the given modules. */
   public Injector build(Stage stage) {
-    List<Module> instances = new ArrayList<>(new ReplacementTransitiveClosureSet(specifiedModules).stream().filter(m -> !removedModules.contains(m)).map(m -> {
+    return Guice.createInjector(stage, instantiateModules());
+  }
+
+  /**
+   * From this {@code InjectorBuilder}, construct the collection of {@link Module}s which would become part of the built Injector. This can be useful if one
+   * wishes to use e.g. {@link com.google.inject.util.Modules#override}.
+   */
+  public List<Module> instantiateModules() {
+    Set<Class<? extends Module>> closure = new HashSet<>(new TransitiveClosureSet(specifiedModules));
+    ImmutableList.Builder<Module> instances = ImmutableList.builder();
+
+    for (Class<? extends Module> m : closure) {
+      if (removedModules.contains(m)) {
+        continue;
+      }
       try {
-        return m.newInstance();
+        instances.add(m.newInstance());
       } catch (InstantiationException | IllegalAccessException ex) {
         throw new IllegalStateException("Failed to instantiate " + m.getSimpleName(), ex);
       }
-    }).collect(toList()));
+    }
     instances.addAll(additionalInstances);
 
-    return Guice.createInjector(stage, instances);
+    return instances.build();
   }
 
-  /** For a given module type, calculate the replacement type. */
-  protected Class<? extends Module> calculateReplacement(Class<? extends Module> newModuleType) {
-    // Resolve overrides
-    LinkedHashSet<Class<? extends Module>> consideredReplacements = new LinkedHashSet<>();
-    while (requestedOverrides.containsKey(newModuleType)) {
-      if (consideredReplacements.contains(newModuleType)) {
-        StringBuilder errorBuilder = new StringBuilder();
-        errorBuilder.append("Circular replacement chain requested while resolving InjectorBuilder: ");
-        for (Class<? extends Module> clazz : consideredReplacements) {
-          errorBuilder.append(clazz.getSimpleName());
-          errorBuilder.append(" -> ");
-        }
-        errorBuilder.append(newModuleType.getSimpleName());
-        throw new IllegalStateException(errorBuilder.toString());
-      }
-      consideredReplacements.add(newModuleType);
-      newModuleType = requestedOverrides.get(newModuleType);
-    }
-
-    return newModuleType;
+  /**
+   * Combine the functionality of {@link com.google.inject.util.Modules#override} and {@link BoundFieldModule} to ease testing.
+   */
+  public Injector buildTestInjector(Object testClassInstance, Module... addlModules) {
+    List<Module> overrides = new ArrayList<>();
+    overrides.add(BoundFieldModule.of(testClassInstance));
+    overrides.addAll(Arrays.asList(addlModules));
+    Injector injector = Guice.createInjector(Stage.PRODUCTION, Modules.override(instantiateModules()).with(overrides));
+    injector.injectMembers(testClassInstance);
+    return injector;
   }
 
   /**
@@ -165,22 +163,20 @@ public class InjectorBuilder {
   }
 
   /** Follow {@code @Requires} annotations, build the transitive closure of the needed modules. */
-  protected final class ReplacementTransitiveClosureSet extends AbstractSet<Class<? extends Module>> {
+  protected final class TransitiveClosureSet extends AbstractSet<Class<? extends Module>> {
     private final Set<Class<? extends Module>> closureSet = new HashSet<>();
 
-    public ReplacementTransitiveClosureSet() {}
+    public TransitiveClosureSet() {}
 
-    public ReplacementTransitiveClosureSet(Collection<Class<? extends Module>> modules) {
+    public TransitiveClosureSet(Collection<Class<? extends Module>> modules) {
       addAll(modules);
     }
 
     /**
-     * Add a module type and all of its transitive dependencies to the set. This also tracks and properly performs module replacements.
+     * Add a module type and all of its transitive dependencies to the set.
      */
     @Override
     public boolean add(Class<? extends Module> newModuleType) {
-      newModuleType = calculateReplacement(newModuleType);
-
       if (!closureSet.add(newModuleType)) {
         return false;
       }

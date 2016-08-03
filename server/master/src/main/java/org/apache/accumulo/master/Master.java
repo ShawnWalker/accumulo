@@ -54,7 +54,6 @@ import org.apache.accumulo.core.client.impl.thrift.TableOperationExceptionType;
 import org.apache.accumulo.core.client.impl.thrift.ThriftTableOperationException;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.Property;
-import org.apache.accumulo.core.conf.SiteConfiguration;
 import org.apache.accumulo.core.data.Key;
 import org.apache.accumulo.core.data.Value;
 import org.apache.accumulo.core.data.impl.KeyExtent;
@@ -76,7 +75,6 @@ import org.apache.accumulo.core.security.Authorizations;
 import org.apache.accumulo.core.security.NamespacePermission;
 import org.apache.accumulo.core.security.TablePermission;
 import org.apache.accumulo.core.tabletserver.thrift.TUnloadTabletGoal;
-import org.apache.accumulo.core.trace.DistributedTrace;
 import org.apache.accumulo.core.trace.thrift.TInfo;
 import org.apache.accumulo.core.util.Daemon;
 import org.apache.accumulo.core.util.Pair;
@@ -97,11 +95,9 @@ import org.apache.accumulo.server.Accumulo;
 import org.apache.accumulo.server.AccumuloServerContext;
 import org.apache.accumulo.server.ServerConstants;
 import org.apache.accumulo.server.ServerOpts;
-import org.apache.accumulo.server.client.HdfsZooInstance;
 import org.apache.accumulo.server.conf.ServerConfigurationFactory;
 import org.apache.accumulo.server.fs.VolumeManager;
 import org.apache.accumulo.server.fs.VolumeManager.FileType;
-import org.apache.accumulo.server.fs.VolumeManagerImpl;
 import org.apache.accumulo.server.init.Initialize;
 import org.apache.accumulo.server.log.WalStateManager;
 import org.apache.accumulo.server.log.WalStateManager.WalMarkerException;
@@ -131,7 +127,6 @@ import org.apache.accumulo.server.rpc.TServerUtils;
 import org.apache.accumulo.server.rpc.ThriftServerType;
 import org.apache.accumulo.server.security.AuditedSecurityOperation;
 import org.apache.accumulo.server.security.SecurityOperation;
-import org.apache.accumulo.server.security.SecurityUtil;
 import org.apache.accumulo.server.security.delegation.AuthenticationTokenKeyManager;
 import org.apache.accumulo.server.security.delegation.AuthenticationTokenSecretManager;
 import org.apache.accumulo.server.security.delegation.ZooAuthenticationKeyDistributor;
@@ -163,14 +158,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import com.google.common.collect.Iterables;
-import com.google.inject.AbstractModule;
 import com.google.inject.Injector;
-import com.google.inject.Stage;
 import com.google.inject.name.Names;
 import javax.inject.Inject;
 import javax.inject.Named;
 import javax.inject.Singleton;
 import org.apache.accumulo.core.inject.InjectorBuilder;
+import org.apache.accumulo.core.inject.LifecycleManager;
 
 /**
  * The Master is responsible for assigning and balancing tablets to tablet servers.
@@ -1426,34 +1420,22 @@ public class Master extends AccumuloServerContext implements LiveTServerSet.List
   }
 
   public static void main(String[] args) throws Exception {
+    Injector injector = null;
     try {
       ServerOpts opts = new ServerOpts();
       final String app = "master";
       opts.parseArgs(app, args);
       final String hostname = opts.getAddress();
 
-      SecurityUtil.serverLogin(SiteConfiguration.getInstance());
-      Accumulo.setupLogging(app);
-      final ServerConfigurationFactory conf = new ServerConfigurationFactory(HdfsZooInstance.getInstance());
-      final VolumeManager fs = VolumeManagerImpl.get();
-      Accumulo.init(fs, conf, app);
-
-      Injector injector = InjectorBuilder.newRoot().add(MasterServerModule.class).add(new AbstractModule() {
-        @Override
-        protected void configure() {
-          bind(ServerConfigurationFactory.class).toInstance(conf);
-          bind(VolumeManager.class).toInstance(fs);
-          bind(String.class).annotatedWith(Names.named("hostname")).toInstance(hostname);
-        }
-      }).build(Stage.PRODUCTION);
+      injector = InjectorBuilder.newRoot().add(MasterServerModule.class).bindInstance(Names.named("app"), String.class, app)
+          .bindInstance(Names.named("hostname"), String.class, hostname).build();
       Master master = injector.getInstance(Master.class);
-      DistributedTrace.enable(hostname, app, conf.getConfiguration());
       master.run();
     } catch (Exception ex) {
       log.error("Unexpected exception, exiting", ex);
       System.exit(1);
     } finally {
-      DistributedTrace.disable();
+      LifecycleManager.shutdown(injector);
     }
   }
 

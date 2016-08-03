@@ -50,7 +50,6 @@ import org.apache.accumulo.core.master.thrift.TabletServerStatus;
 import org.apache.accumulo.core.rpc.ThriftUtil;
 import org.apache.accumulo.core.tabletserver.thrift.ActiveScan;
 import org.apache.accumulo.core.tabletserver.thrift.TabletClientService.Client;
-import org.apache.accumulo.core.trace.DistributedTrace;
 import org.apache.accumulo.core.trace.Tracer;
 import org.apache.accumulo.core.util.Daemon;
 import org.apache.accumulo.core.util.Pair;
@@ -79,13 +78,10 @@ import org.apache.accumulo.monitor.servlets.XMLServlet;
 import org.apache.accumulo.monitor.servlets.trace.ListType;
 import org.apache.accumulo.monitor.servlets.trace.ShowTrace;
 import org.apache.accumulo.monitor.servlets.trace.Summary;
-import org.apache.accumulo.server.Accumulo;
 import org.apache.accumulo.server.AccumuloServerContext;
 import org.apache.accumulo.server.ServerOpts;
 import org.apache.accumulo.server.client.HdfsZooInstance;
 import org.apache.accumulo.server.conf.ServerConfigurationFactory;
-import org.apache.accumulo.server.fs.VolumeManager;
-import org.apache.accumulo.server.fs.VolumeManagerImpl;
 import org.apache.accumulo.server.monitor.LogService;
 import org.apache.accumulo.server.problems.ProblemReports;
 import org.apache.accumulo.server.problems.ProblemType;
@@ -101,9 +97,11 @@ import org.slf4j.LoggerFactory;
 
 import com.google.common.net.HostAndPort;
 import com.google.inject.Injector;
-import com.google.inject.Stage;
+import com.google.inject.name.Names;
+import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.apache.accumulo.core.inject.InjectorBuilder;
+import org.apache.accumulo.core.inject.LifecycleManager;
 
 /**
  * Serve master statistics with an embedded web server.
@@ -113,18 +111,18 @@ public class Monitor {
   private static final Logger log = LoggerFactory.getLogger(Monitor.class);
 
   private static final int REFRESH_TIME = 5;
-  private static AtomicLong lastRecalc = new AtomicLong(0L);
-  private static double totalIngestRate = 0.0;
-  private static double totalQueryRate = 0.0;
-  private static double totalScanRate = 0.0;
-  private static long totalEntries = 0L;
-  private static int totalTabletCount = 0;
-  private static long totalHoldTime = 0;
-  private static long totalLookups = 0;
-  private static int totalTables = 0;
+  private AtomicLong lastRecalc = new AtomicLong(0L);
+  private double totalIngestRate = 0.0;
+  private double totalQueryRate = 0.0;
+  private double totalScanRate = 0.0;
+  private long totalEntries = 0L;
+  private int totalTabletCount = 0;
+  private long totalHoldTime = 0;
+  private long totalLookups = 0;
+  private int totalTables = 0;
 
   private static class MaxList<T> extends LinkedList<Pair<Long,T>> {
-    private static final long serialVersionUID = 1L;
+    private final long serialVersionUID = 1L;
 
     private long maxDelta;
 
@@ -144,42 +142,49 @@ public class Monitor {
 
   }
 
-  private static final int MAX_TIME_PERIOD = 60 * 60 * 1000;
-  private static final List<Pair<Long,Double>> loadOverTime = Collections.synchronizedList(new MaxList<Double>(MAX_TIME_PERIOD));
-  private static final List<Pair<Long,Double>> ingestRateOverTime = Collections.synchronizedList(new MaxList<Double>(MAX_TIME_PERIOD));
-  private static final List<Pair<Long,Double>> ingestByteRateOverTime = Collections.synchronizedList(new MaxList<Double>(MAX_TIME_PERIOD));
-  private static final List<Pair<Long,Integer>> minorCompactionsOverTime = Collections.synchronizedList(new MaxList<Integer>(MAX_TIME_PERIOD));
-  private static final List<Pair<Long,Integer>> majorCompactionsOverTime = Collections.synchronizedList(new MaxList<Integer>(MAX_TIME_PERIOD));
-  private static final List<Pair<Long,Double>> lookupsOverTime = Collections.synchronizedList(new MaxList<Double>(MAX_TIME_PERIOD));
-  private static final List<Pair<Long,Integer>> queryRateOverTime = Collections.synchronizedList(new MaxList<Integer>(MAX_TIME_PERIOD));
-  private static final List<Pair<Long,Integer>> scanRateOverTime = Collections.synchronizedList(new MaxList<Integer>(MAX_TIME_PERIOD));
-  private static final List<Pair<Long,Double>> queryByteRateOverTime = Collections.synchronizedList(new MaxList<Double>(MAX_TIME_PERIOD));
-  private static final List<Pair<Long,Double>> indexCacheHitRateOverTime = Collections.synchronizedList(new MaxList<Double>(MAX_TIME_PERIOD));
-  private static final List<Pair<Long,Double>> dataCacheHitRateOverTime = Collections.synchronizedList(new MaxList<Double>(MAX_TIME_PERIOD));
-  private static EventCounter lookupRateTracker = new EventCounter();
-  private static EventCounter indexCacheHitTracker = new EventCounter();
-  private static EventCounter indexCacheRequestTracker = new EventCounter();
-  private static EventCounter dataCacheHitTracker = new EventCounter();
-  private static EventCounter dataCacheRequestTracker = new EventCounter();
+  private final int MAX_TIME_PERIOD = 60 * 60 * 1000;
+  private final List<Pair<Long,Double>> loadOverTime = Collections.synchronizedList(new MaxList<Double>(MAX_TIME_PERIOD));
+  private final List<Pair<Long,Double>> ingestRateOverTime = Collections.synchronizedList(new MaxList<Double>(MAX_TIME_PERIOD));
+  private final List<Pair<Long,Double>> ingestByteRateOverTime = Collections.synchronizedList(new MaxList<Double>(MAX_TIME_PERIOD));
+  private final List<Pair<Long,Integer>> minorCompactionsOverTime = Collections.synchronizedList(new MaxList<Integer>(MAX_TIME_PERIOD));
+  private final List<Pair<Long,Integer>> majorCompactionsOverTime = Collections.synchronizedList(new MaxList<Integer>(MAX_TIME_PERIOD));
+  private final List<Pair<Long,Double>> lookupsOverTime = Collections.synchronizedList(new MaxList<Double>(MAX_TIME_PERIOD));
+  private final List<Pair<Long,Integer>> queryRateOverTime = Collections.synchronizedList(new MaxList<Integer>(MAX_TIME_PERIOD));
+  private final List<Pair<Long,Integer>> scanRateOverTime = Collections.synchronizedList(new MaxList<Integer>(MAX_TIME_PERIOD));
+  private final List<Pair<Long,Double>> queryByteRateOverTime = Collections.synchronizedList(new MaxList<Double>(MAX_TIME_PERIOD));
+  private final List<Pair<Long,Double>> indexCacheHitRateOverTime = Collections.synchronizedList(new MaxList<Double>(MAX_TIME_PERIOD));
+  private final List<Pair<Long,Double>> dataCacheHitRateOverTime = Collections.synchronizedList(new MaxList<Double>(MAX_TIME_PERIOD));
+  private EventCounter lookupRateTracker = new EventCounter();
+  private EventCounter indexCacheHitTracker = new EventCounter();
+  private EventCounter indexCacheRequestTracker = new EventCounter();
+  private EventCounter dataCacheHitTracker = new EventCounter();
+  private EventCounter dataCacheRequestTracker = new EventCounter();
 
-  private static volatile boolean fetching = false;
-  private static MasterMonitorInfo mmi;
-  private static Map<String,Map<ProblemType,Integer>> problemSummary = Collections.emptyMap();
-  private static Exception problemException;
-  private static GCStatus gcStatus;
+  private volatile boolean fetching = false;
+  private MasterMonitorInfo mmi;
+  private Map<String,Map<ProblemType,Integer>> problemSummary = Collections.emptyMap();
+  private Exception problemException;
+  private GCStatus gcStatus;
 
-  private static Instance instance;
+  private Instance instance;
 
-  private static ServerConfigurationFactory config;
-  private static AccumuloServerContext context;
+  private ServerConfigurationFactory config;
+  private AccumuloServerContext context;
 
-  private static EmbeddedWebServer server;
+  private EmbeddedWebServer server;
 
   private ZooLock monitorLock;
 
-  private static final String DEFAULT_INSTANCE_NAME = "(Unavailable)";
-  public static final AtomicReference<String> cachedInstanceName = new AtomicReference<>(DEFAULT_INSTANCE_NAME);
+  private final String DEFAULT_INSTANCE_NAME = "(Unavailable)";
+  public final AtomicReference<String> cachedInstanceName = new AtomicReference<>(DEFAULT_INSTANCE_NAME);
 
+  @Inject
+  Monitor(Instance instance, ServerConfigurationFactory config) {
+    this.instance = instance;
+    this.config = config;
+    this.context = new AccumuloServerContext(config);    
+  }
+  
   private static class EventCounter {
 
     Map<String,Pair<Long,Long>> prevSamples = new HashMap<>();
@@ -236,7 +241,7 @@ public class Monitor {
     }
   }
 
-  public static void fetchData() {
+  public void fetchData() {
     double totalIngestRate = 0.;
     double totalIngestByteRate = 0.;
     double totalQueryRate = 0.;
@@ -289,7 +294,7 @@ public class Monitor {
           } else {
             mmi = null;
           }
-          Monitor.gcStatus = fetchGcStatus();
+          Monitor.this.gcStatus = fetchGcStatus();
         } catch (Exception e) {
           mmi = null;
           log.info("Error fetching stats: " + e);
@@ -341,16 +346,16 @@ public class Monitor {
           totalTabletCount += tInfo.tablets;
           totalTables++;
         }
-        Monitor.totalIngestRate = totalIngestRate;
-        Monitor.totalTables = totalTables;
+        Monitor.this.totalIngestRate = totalIngestRate;
+        Monitor.this.totalTables = totalTables;
         totalIngestByteRate = totalIngestByteRate / 1000000.0;
-        Monitor.totalQueryRate = totalQueryRate;
-        Monitor.totalScanRate = totalScanRate;
+        Monitor.this.totalQueryRate = totalQueryRate;
+        Monitor.this.totalScanRate = totalScanRate;
         totalQueryByteRate = totalQueryByteRate / 1000000.0;
-        Monitor.totalEntries = totalEntries;
-        Monitor.totalTabletCount = totalTabletCount;
-        Monitor.totalHoldTime = totalHoldTime;
-        Monitor.totalLookups = totalLookups;
+        Monitor.this.totalEntries = totalEntries;
+        Monitor.this.totalTabletCount = totalTabletCount;
+        Monitor.this.totalHoldTime = totalHoldTime;
+        Monitor.this.totalLookups = totalLookups;
 
         ingestRateOverTime.add(new Pair<>(currentTime, totalIngestRate));
         ingestByteRateOverTime.add(new Pair<>(currentTime, totalIngestByteRate));
@@ -376,12 +381,12 @@ public class Monitor {
         calcCacheHitRate(dataCacheHitRateOverTime, currentTime, dataCacheHitTracker, dataCacheRequestTracker);
       }
       try {
-        Monitor.problemSummary = ProblemReports.getInstance(getContext()).summarize();
-        Monitor.problemException = null;
+        Monitor.this.problemSummary = ProblemReports.getInstance(getContext()).summarize();
+        Monitor.this.problemException = null;
       } catch (Exception e) {
         log.info("Failed to obtain problem reports ", e);
-        Monitor.problemSummary = Collections.emptyMap();
-        Monitor.problemException = e;
+        Monitor.this.problemSummary = Collections.emptyMap();
+        Monitor.this.problemException = e;
       }
 
     } finally {
@@ -392,7 +397,7 @@ public class Monitor {
     }
   }
 
-  private static void calcCacheHitRate(List<Pair<Long,Double>> hitRate, long currentTime, EventCounter cacheHits, EventCounter cacheReq) {
+  private void calcCacheHitRate(List<Pair<Long,Double>> hitRate, long currentTime, EventCounter cacheHits, EventCounter cacheReq) {
     long req = cacheReq.calculateCount();
     if (req > 0)
       hitRate.add(new Pair<>(currentTime, cacheHits.calculateCount() / (double) cacheReq.calculateCount()));
@@ -400,7 +405,7 @@ public class Monitor {
       hitRate.add(new Pair<Long,Double>(currentTime, null));
   }
 
-  private static GCStatus fetchGcStatus() {
+  private GCStatus fetchGcStatus() {
     GCStatus result = null;
     HostAndPort address = null;
     try {
@@ -426,31 +431,27 @@ public class Monitor {
 
   public static void main(String[] args) throws Exception {
     SecurityUtil.serverLogin(SiteConfiguration.getInstance());
+    log.info("Version " + Constants.VERSION);
 
     ServerOpts opts = new ServerOpts();
     final String app = "monitor";
     opts.parseArgs(app, args);
     String hostname = opts.getAddress();
 
-    Accumulo.setupLogging(app);
-    VolumeManager fs = VolumeManagerImpl.get();
-    instance = HdfsZooInstance.getInstance();
-    config = new ServerConfigurationFactory(instance);
-    context = new AccumuloServerContext(config);
-    log.info("Version " + Constants.VERSION);
-    log.info("Instance " + instance.getInstanceID());
-    Accumulo.init(fs, config, app);
-    Injector injector = InjectorBuilder.newRoot().add(MonitorModule.class).build(Stage.PRODUCTION);
-    Monitor monitor = injector.getInstance(Monitor.class);
-    DistributedTrace.enable(hostname, app, config.getConfiguration());
+    Injector injector=InjectorBuilder.newRoot().add(MonitorModule.class)
+            .bindInstance(Names.named("app"), String.class, app)
+            .bindInstance(Names.named("hostname"), String.class, hostname)
+            .build();
+    Monitor monitor = injector.getInstance(Monitor.class);    
+    log.info("Instance " + monitor.instance.getInstanceID());
     try {
       monitor.run(hostname);
     } finally {
-      DistributedTrace.disable();
+      LifecycleManager.shutdown(injector);
     }
   }
 
-  private static long START_TIME;
+  private long START_TIME;
 
   public void run(String hostname) {
     try {
@@ -460,12 +461,12 @@ public class Monitor {
       throw new RuntimeException(e);
     }
 
-    Monitor.START_TIME = System.currentTimeMillis();
+    Monitor.this.START_TIME = System.currentTimeMillis();
     int ports[] = config.getConfiguration().getPort(Property.MONITOR_PORT);
     for (int port : ports) {
       try {
         log.debug("Creating monitor on port " + port);
-        server = new EmbeddedWebServer(hostname, port);
+        server = new EmbeddedWebServer(hostname, port, context.getConfiguration());
         server.addServlet(DefaultServlet.class, "/");
         server.addServlet(OperationServlet.class, "/op");
         server.addServlet(MasterServlet.class, "/master");
@@ -508,7 +509,7 @@ public class Monitor {
     }
 
     if (null != hostname) {
-      LogService.startLogListener(Monitor.getContext().getConfiguration(), instance.getInstanceID(), hostname);
+      LogService.startLogListener(Monitor.this.getContext().getConfiguration(), instance.getInstanceID(), hostname);
     } else {
       log.warn("Not starting log4j listener as we could not determine address to use");
     }
@@ -522,7 +523,7 @@ public class Monitor {
       public void run() {
         while (true) {
           try {
-            Monitor.fetchData();
+            Monitor.this.fetchData();
           } catch (Exception e) {
             log.warn("{}", e.getMessage(), e);
           }
@@ -538,7 +539,7 @@ public class Monitor {
       public void run() {
         while (true) {
           try {
-            Monitor.fetchScans();
+            Monitor.this.fetchScans();
           } catch (Exception e) {
             log.warn("{}", e.getMessage(), e);
           }
@@ -564,15 +565,15 @@ public class Monitor {
     }
   }
 
-  static final Map<HostAndPort,ScanStats> allScans = new HashMap<>();
+  final Map<HostAndPort,ScanStats> allScans = new HashMap<>();
 
-  public static Map<HostAndPort,ScanStats> getScans() {
+  public Map<HostAndPort,ScanStats> getScans() {
     synchronized (allScans) {
       return new HashMap<>(allScans);
     }
   }
 
-  protected static void fetchScans() throws Exception {
+  protected void fetchScans() throws Exception {
     if (instance == null)
       return;
     Connector c = context.getConnector();
@@ -714,133 +715,133 @@ public class Monitor {
     }
   }
 
-  public static MasterMonitorInfo getMmi() {
+  public MasterMonitorInfo getMmi() {
     return mmi;
   }
 
-  public static int getTotalTables() {
+  public int getTotalTables() {
     return totalTables;
   }
 
-  public static int getTotalTabletCount() {
+  public int getTotalTabletCount() {
     return totalTabletCount;
   }
 
-  public static long getTotalEntries() {
+  public long getTotalEntries() {
     return totalEntries;
   }
 
-  public static double getTotalIngestRate() {
+  public double getTotalIngestRate() {
     return totalIngestRate;
   }
 
-  public static double getTotalQueryRate() {
+  public double getTotalQueryRate() {
     return totalQueryRate;
   }
 
-  public static double getTotalScanRate() {
+  public double getTotalScanRate() {
     return totalScanRate;
   }
 
-  public static long getTotalHoldTime() {
+  public long getTotalHoldTime() {
     return totalHoldTime;
   }
 
-  public static Exception getProblemException() {
+  public Exception getProblemException() {
     return problemException;
   }
 
-  public static Map<String,Map<ProblemType,Integer>> getProblemSummary() {
+  public Map<String,Map<ProblemType,Integer>> getProblemSummary() {
     return problemSummary;
   }
 
-  public static GCStatus getGcStatus() {
+  public GCStatus getGcStatus() {
     return gcStatus;
   }
 
-  public static long getTotalLookups() {
+  public long getTotalLookups() {
     return totalLookups;
   }
 
-  public static long getStartTime() {
+  public long getStartTime() {
     return START_TIME;
   }
 
-  public static List<Pair<Long,Double>> getLoadOverTime() {
+  public List<Pair<Long,Double>> getLoadOverTime() {
     synchronized (loadOverTime) {
       return new ArrayList<>(loadOverTime);
     }
   }
 
-  public static List<Pair<Long,Double>> getIngestRateOverTime() {
+  public List<Pair<Long,Double>> getIngestRateOverTime() {
     synchronized (ingestRateOverTime) {
       return new ArrayList<>(ingestRateOverTime);
     }
   }
 
-  public static List<Pair<Long,Double>> getIngestByteRateOverTime() {
+  public List<Pair<Long,Double>> getIngestByteRateOverTime() {
     synchronized (ingestByteRateOverTime) {
       return new ArrayList<>(ingestByteRateOverTime);
     }
   }
 
-  public static List<Pair<Long,Integer>> getMinorCompactionsOverTime() {
+  public List<Pair<Long,Integer>> getMinorCompactionsOverTime() {
     synchronized (minorCompactionsOverTime) {
       return new ArrayList<>(minorCompactionsOverTime);
     }
   }
 
-  public static List<Pair<Long,Integer>> getMajorCompactionsOverTime() {
+  public List<Pair<Long,Integer>> getMajorCompactionsOverTime() {
     synchronized (majorCompactionsOverTime) {
       return new ArrayList<>(majorCompactionsOverTime);
     }
   }
 
-  public static List<Pair<Long,Double>> getLookupsOverTime() {
+  public List<Pair<Long,Double>> getLookupsOverTime() {
     synchronized (lookupsOverTime) {
       return new ArrayList<>(lookupsOverTime);
     }
   }
 
-  public static double getLookupRate() {
+  public double getLookupRate() {
     return lookupRateTracker.calculateRate();
   }
 
-  public static List<Pair<Long,Integer>> getQueryRateOverTime() {
+  public List<Pair<Long,Integer>> getQueryRateOverTime() {
     synchronized (queryRateOverTime) {
       return new ArrayList<>(queryRateOverTime);
     }
   }
 
-  public static List<Pair<Long,Integer>> getScanRateOverTime() {
+  public List<Pair<Long,Integer>> getScanRateOverTime() {
     synchronized (scanRateOverTime) {
       return new ArrayList<>(scanRateOverTime);
     }
   }
 
-  public static List<Pair<Long,Double>> getQueryByteRateOverTime() {
+  public List<Pair<Long,Double>> getQueryByteRateOverTime() {
     synchronized (queryByteRateOverTime) {
       return new ArrayList<>(queryByteRateOverTime);
     }
   }
 
-  public static List<Pair<Long,Double>> getIndexCacheHitRateOverTime() {
+  public List<Pair<Long,Double>> getIndexCacheHitRateOverTime() {
     synchronized (indexCacheHitRateOverTime) {
       return new ArrayList<>(indexCacheHitRateOverTime);
     }
   }
 
-  public static List<Pair<Long,Double>> getDataCacheHitRateOverTime() {
+  public List<Pair<Long,Double>> getDataCacheHitRateOverTime() {
     synchronized (dataCacheHitRateOverTime) {
       return new ArrayList<>(dataCacheHitRateOverTime);
     }
   }
 
-  public static boolean isUsingSsl() {
+  public boolean isUsingSsl() {
     return server.isUsingSsl();
   }
 
-  public static AccumuloServerContext getContext() {
+  public AccumuloServerContext getContext() {
     return context;
   }
 }
