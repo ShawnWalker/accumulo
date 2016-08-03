@@ -18,9 +18,10 @@ package org.apache.accumulo.monitor;
 
 import com.google.inject.AbstractModule;
 import org.apache.accumulo.core.inject.Requires;
+import org.apache.accumulo.monitor.servlets.MonitorServletsModule;
 import org.apache.accumulo.server.AccumuloServerModule;
 
-@Requires(AccumuloServerModule.class)
+@Requires({AccumuloServerModule.class, MonitorServletsModule.class})
 public class MonitorModule extends AbstractModule {
   @Override
   protected void configure() {

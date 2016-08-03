@@ -17,7 +17,6 @@
 package org.apache.accumulo.tserver;
 
 import com.google.inject.AbstractModule;
-import com.google.inject.name.Names;
 import org.apache.accumulo.core.inject.Requires;
 import org.apache.accumulo.server.AccumuloServerModule;
 

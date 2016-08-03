@@ -19,6 +19,7 @@ package org.apache.accumulo.monitor.servlets;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.Set;
+import javax.inject.Singleton;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -30,7 +31,6 @@ import org.apache.accumulo.core.replication.ReplicationConstants;
 import org.apache.accumulo.core.replication.ReplicationTable;
 import org.apache.accumulo.core.replication.ReplicationTarget;
 import org.apache.accumulo.core.zookeeper.ZooUtil;
-import org.apache.accumulo.monitor.Monitor;
 import org.apache.accumulo.monitor.util.Table;
 import org.apache.accumulo.monitor.util.celltypes.NumberType;
 import org.apache.accumulo.server.replication.DistributedWorkQueueWorkAssignerHelper;
@@ -43,6 +43,7 @@ import org.slf4j.LoggerFactory;
 /**
  *
  */
+@Singleton
 public class ReplicationServlet extends BasicServlet {
   private static final Logger log = LoggerFactory.getLogger(ReplicationServlet.class);
 
@@ -54,7 +55,7 @@ public class ReplicationServlet extends BasicServlet {
   private synchronized ReplicationUtil getReplicationUtil() {
     // make transient replicationUtil available as needed
     if (replicationUtil == null) {
-      replicationUtil = new ReplicationUtil(Monitor.getContext());
+      replicationUtil = new ReplicationUtil(monitor.getContext());
     }
     return replicationUtil;
   }
@@ -66,8 +67,8 @@ public class ReplicationServlet extends BasicServlet {
 
   @Override
   protected void pageBody(HttpServletRequest req, HttpServletResponse response, StringBuilder sb) throws Exception {
-    final Connector conn = Monitor.getContext().getConnector();
-    final MasterMonitorInfo mmi = Monitor.getMmi();
+    final Connector conn = monitor.getContext().getConnector();
+    final MasterMonitorInfo mmi = monitor.getMmi();
 
     // The total number of "slots" we have to replicate data
     int totalWorkQueueSize = getReplicationUtil().getMaxReplicationThreads(mmi);
@@ -140,10 +141,10 @@ public class ReplicationServlet extends BasicServlet {
     replicationInProgress.addUnsortableColumn("Status");
 
     // Read the files from the workqueue in zk
-    String zkRoot = ZooUtil.getRoot(Monitor.getContext().getInstance());
+    String zkRoot = ZooUtil.getRoot(monitor.getContext().getInstance());
     final String workQueuePath = zkRoot + ReplicationConstants.ZOO_WORK_QUEUE;
 
-    DistributedWorkQueue workQueue = new DistributedWorkQueue(workQueuePath, Monitor.getContext().getConfiguration());
+    DistributedWorkQueue workQueue = new DistributedWorkQueue(workQueuePath, monitor.getContext().getConfiguration());
 
     try {
       for (String queueKey : workQueue.getWorkQueued()) {

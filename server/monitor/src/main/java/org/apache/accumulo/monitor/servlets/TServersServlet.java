@@ -39,7 +39,6 @@ import org.apache.accumulo.core.tabletserver.thrift.TabletClientService;
 import org.apache.accumulo.core.tabletserver.thrift.TabletStats;
 import org.apache.accumulo.core.trace.Tracer;
 import org.apache.accumulo.core.util.Duration;
-import org.apache.accumulo.monitor.Monitor;
 import org.apache.accumulo.monitor.util.Table;
 import org.apache.accumulo.monitor.util.TableRow;
 import org.apache.accumulo.monitor.util.celltypes.CompactionsType;
@@ -55,7 +54,9 @@ import org.apache.accumulo.server.util.ActionStatsUpdator;
 import org.apache.accumulo.server.util.TableInfoUtil;
 
 import com.google.common.net.HostAndPort;
+import javax.inject.Singleton;
 
+@Singleton
 public class TServersServlet extends BasicServlet {
 
   private static final long serialVersionUID = 1L;
@@ -86,7 +87,7 @@ public class TServersServlet extends BasicServlet {
     // Check to make sure tserver is a known address
     boolean tserverExists = false;
     if (tserverAddress != null && tserverAddress.isEmpty() == false) {
-      for (TabletServerStatus ts : Monitor.getMmi().getTServerInfo()) {
+      for (TabletServerStatus ts : monitor.getMmi().getTServerInfo()) {
         if (tserverAddress.equals(ts.getName())) {
           tserverExists = true;
           break;
@@ -100,8 +101,8 @@ public class TServersServlet extends BasicServlet {
       doDeadTserverList(req, sb);
 
       ArrayList<TabletServerStatus> tservers = new ArrayList<>();
-      if (Monitor.getMmi() != null)
-        tservers.addAll(Monitor.getMmi().tServerInfo);
+      if (monitor.getMmi() != null)
+        tservers.addAll(monitor.getMmi().tServerInfo);
 
       Table tServerList = new Table("tservers", "Tablet&nbsp;Servers");
       tServerList.setSubCaption("Click on the <span style='color: #0000ff;'>server address</span> to view detailed performance statistics for that server.");
@@ -126,10 +127,10 @@ public class TServersServlet extends BasicServlet {
     TabletStats historical = new TabletStats(null, new ActionStats(), new ActionStats(), new ActionStats(), 0, 0, 0, 0);
     List<TabletStats> tsStats = new ArrayList<>();
     try {
-      ClientContext context = Monitor.getContext();
+      ClientContext context = monitor.getContext();
       TabletClientService.Client client = ThriftUtil.getClient(new TabletClientService.Client.Factory(), address, context);
       try {
-        for (String tableId : Monitor.getMmi().tableMap.keySet()) {
+        for (String tableId : monitor.getMmi().tableMap.keySet()) {
           tsStats.addAll(client.getTabletStats(Tracer.traceInfo(), context.rpcCreds(), tableId));
         }
         historical = client.getHistoricalStats(Tracer.traceInfo(), context.rpcCreds());
@@ -275,19 +276,19 @@ public class TServersServlet extends BasicServlet {
   }
 
   private void doBadTserverList(HttpServletRequest req, StringBuilder sb) {
-    if (Monitor.getMmi() != null && !Monitor.getMmi().badTServers.isEmpty()) {
+    if (monitor.getMmi() != null && !monitor.getMmi().badTServers.isEmpty()) {
       Table badTServerList = new Table("badtservers", "Non-Functioning&nbsp;Tablet&nbsp;Servers", "error");
       badTServerList.setSubCaption("The following tablet servers reported a status other than Online.");
       badTServerList.addSortableColumn("Tablet&nbsp;Server");
       badTServerList.addSortableColumn("Tablet&nbsp;Server&nbsp;Status");
-      for (Entry<String,Byte> badserver : Monitor.getMmi().badTServers.entrySet())
+      for (Entry<String,Byte> badserver : monitor.getMmi().badTServers.entrySet())
         badTServerList.addRow(badserver.getKey(), TabletServerState.getStateById(badserver.getValue()).name());
       badTServerList.generate(req, sb);
     }
   }
 
   private void doDeadTserverList(HttpServletRequest req, StringBuilder sb) {
-    MasterMonitorInfo mmi = Monitor.getMmi();
+    MasterMonitorInfo mmi = monitor.getMmi();
     if (mmi != null) {
       List<DeadServer> obit = mmi.deadTabletServers;
       Table deadTServerList = new Table("deaddtservers", "Dead&nbsp;Tablet&nbsp;Servers", "error");

@@ -19,6 +19,9 @@ package org.apache.accumulo.monitor.servlets;
 import java.io.IOException;
 import java.lang.management.ManagementFactory;
 import java.util.ArrayList;
+import java.util.function.Function;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -27,32 +30,38 @@ import org.apache.accumulo.core.conf.Property;
 import org.apache.accumulo.core.master.thrift.TabletServerStatus;
 import org.apache.accumulo.monitor.Monitor;
 
+@Singleton
 public class VisServlet extends BasicServlet {
-  private static final int concurrentScans = Monitor.getContext().getConfiguration().getCount(Property.TSERV_READ_AHEAD_MAXCONCURRENT);
-
   private static final long serialVersionUID = 1L;
 
-  public enum StatType {
-    osload(ManagementFactory.getOperatingSystemMXBean().getAvailableProcessors(), true, 100, "OS Load"),
-    ingest(1000, true, 1, "Ingest Entries"),
-    query(10000, true, 1, "Scan Entries"),
-    ingestMB(10, true, 10, "Ingest MB"),
-    queryMB(5, true, 10, "Scan MB"),
-    scans(concurrentScans * 2, false, 1, "Running Scans"),
-    scansessions(50, true, 10, "Scan Sessions"),
-    holdtime(60000, false, 1, "Hold Time"),
-    allavg(1, false, 100, "Overall Avg", true),
-    allmax(1, false, 100, "Overall Max", true);
+  private final int concurrentScans;
 
-    private int max;
+  @Inject
+  VisServlet(Monitor monitor) {
+    concurrentScans = monitor.getContext().getConfiguration().getCount(Property.TSERV_READ_AHEAD_MAXCONCURRENT);
+  }
+
+  public enum StatType {
+    osload(vs -> ManagementFactory.getOperatingSystemMXBean().getAvailableProcessors(), true, 100, "OS Load"),
+    ingest(vs -> 1000, true, 1, "Ingest Entries"),
+    query(vs -> 10000, true, 1, "Scan Entries"),
+    ingestMB(vs -> 10, true, 10, "Ingest MB"),
+    queryMB(vs -> 5, true, 10, "Scan MB"),
+    scans(vs -> vs.concurrentScans * 2, false, 1, "Running Scans"),
+    scansessions(vs -> 50, true, 10, "Scan Sessions"),
+    holdtime(vs -> 60000, false, 1, "Hold Time"),
+    allavg(vs -> 1, false, 100, "Overall Avg", true),
+    allmax(vs -> 1, false, 100, "Overall Max", true);
+
+    private Function<VisServlet,Integer> maxFn;
     private boolean adjustMax;
     private float significance;
     private String description;
     private boolean derived;
 
     /**
-     * @param max
-     *          initial estimate of largest possible value for this stat
+     * @param maxFn
+     *          Function which returns an initial estimate of largest possible value for this stat
      * @param adjustMax
      *          indicates whether max should be adjusted based on observed values
      * @param significance
@@ -60,20 +69,20 @@ public class VisServlet extends BasicServlet {
      * @param description
      *          as appears in selection box
      */
-    private StatType(int max, boolean adjustMax, float significance, String description) {
-      this(max, adjustMax, significance, description, false);
+    private StatType(Function<VisServlet,Integer> maxFn, boolean adjustMax, float significance, String description) {
+      this(maxFn, adjustMax, significance, description, false);
     }
 
-    private StatType(int max, boolean adjustMax, float significance, String description, boolean derived) {
-      this.max = max;
+    private StatType(Function<VisServlet,Integer> maxFn, boolean adjustMax, float significance, String description, boolean derived) {
+      this.maxFn = maxFn;
       this.adjustMax = adjustMax;
       this.significance = significance;
       this.description = description;
       this.derived = derived;
     }
 
-    public int getMax() {
-      return max;
+    public int getMax(VisServlet vs) {
+      return maxFn.apply(vs);
     }
 
     public boolean getAdjustMax() {
@@ -151,8 +160,8 @@ public class VisServlet extends BasicServlet {
     }
 
     ArrayList<TabletServerStatus> tservers = new ArrayList<>();
-    if (Monitor.getMmi() != null)
-      tservers.addAll(Monitor.getMmi().tServerInfo);
+    if (monitor.getMmi() != null)
+      tservers.addAll(monitor.getMmi().tServerInfo);
 
     if (tservers.size() == 0)
       return;
@@ -215,7 +224,7 @@ public class VisServlet extends BasicServlet {
     sb.append("};\n");
     sb.append("var maxStatValues = {");
     for (StatType st : StatType.values())
-      sb.append("'").append(st).append("': ").append(st.getMax()).append(", ");
+      sb.append("'").append(st).append("': ").append(st.getMax(this)).append(", ");
     sb.setLength(sb.length() - 2);
     sb.append("}; // initial values that are system-dependent may increase based on observed values\n");
     sb.append("var adjustMax = {");

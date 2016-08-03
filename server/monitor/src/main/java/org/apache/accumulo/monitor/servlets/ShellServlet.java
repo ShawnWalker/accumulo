@@ -62,6 +62,9 @@ public class ShellServlet extends BasicServlet {
 
   @Override
   protected void pageBody(HttpServletRequest req, HttpServletResponse response, StringBuilder sb) throws IOException {
+    if (req.getAttribute("javax.servlet.request.cipher-suite") == null) {
+      throw new IllegalStateException("Shell interaction requests must be made over https");
+    }
     HttpSession session = req.getSession(true);
     final String CSRF_TOKEN;
     if (null == session.getAttribute(CSRF_KEY)) {
@@ -178,6 +181,9 @@ public class ShellServlet extends BasicServlet {
 
   @Override
   protected void doPost(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
+    if (req.getAttribute("javax.servlet.request.cipher-suite") == null) {
+      throw new IllegalStateException("Shell interaction requests must be made over https");
+    }
     final HttpSession session = req.getSession(true);
     String user = (String) session.getAttribute("user");
     if (user == null || !userShells().containsKey(session.getId())) {

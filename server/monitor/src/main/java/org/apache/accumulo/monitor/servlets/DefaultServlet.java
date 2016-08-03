@@ -26,6 +26,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.TimeZone;
+import javax.inject.Singleton;
 
 import javax.servlet.ServletException;
 import javax.servlet.ServletOutputStream;
@@ -35,11 +36,11 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.accumulo.core.master.thrift.MasterMonitorInfo;
 import org.apache.accumulo.core.util.Duration;
 import org.apache.accumulo.core.util.Pair;
-import org.apache.accumulo.monitor.Monitor;
 import org.apache.accumulo.monitor.ZooKeeperStatus;
 import org.apache.accumulo.monitor.ZooKeeperStatus.ZooKeeperState;
 import org.apache.accumulo.monitor.util.celltypes.NumberType;
 
+@Singleton
 public class DefaultServlet extends BasicServlet {
 
   private static final long serialVersionUID = 1L;
@@ -198,33 +199,33 @@ public class DefaultServlet extends BasicServlet {
     sb.append("<p><table class=\"noborder\">\n");
 
     sb.append("<tr><td>\n");
-    plotData(sb, "Ingest (Entries/s)", Monitor.getIngestRateOverTime(), false);
+    plotData(sb, "Ingest (Entries/s)", monitor.getIngestRateOverTime(), false);
     sb.append("</td><td>\n");
-    plotData(sb, "Scan (Entries/s)", false, Arrays.asList("Read", "Returned"), Monitor.getScanRateOverTime(), Monitor.getQueryRateOverTime());
+    plotData(sb, "Scan (Entries/s)", false, Arrays.asList("Read", "Returned"), monitor.getScanRateOverTime(), monitor.getQueryRateOverTime());
     sb.append("</td></tr>\n");
 
     sb.append("<tr><td>\n");
-    plotData(sb, "Ingest (MB/s)", Monitor.getIngestByteRateOverTime(), false);
+    plotData(sb, "Ingest (MB/s)", monitor.getIngestByteRateOverTime(), false);
     sb.append("</td><td>\n");
-    plotData(sb, "Scan (MB/s)", Monitor.getQueryByteRateOverTime(), false);
+    plotData(sb, "Scan (MB/s)", monitor.getQueryByteRateOverTime(), false);
     sb.append("</td></tr>\n");
 
     sb.append("<tr><td>\n");
-    plotData(sb, "Load Average", Monitor.getLoadOverTime(), false);
+    plotData(sb, "Load Average", monitor.getLoadOverTime(), false);
     sb.append("</td><td>\n");
-    plotData(sb, "Seeks", Monitor.getLookupsOverTime(), false);
+    plotData(sb, "Seeks", monitor.getLookupsOverTime(), false);
     sb.append("</td></tr>\n");
 
     sb.append("<tr><td>\n");
-    plotData(sb, "Minor Compactions", Monitor.getMinorCompactionsOverTime(), false);
+    plotData(sb, "Minor Compactions", monitor.getMinorCompactionsOverTime(), false);
     sb.append("</td><td>\n");
-    plotData(sb, "Major Compactions", Monitor.getMajorCompactionsOverTime(), false);
+    plotData(sb, "Major Compactions", monitor.getMajorCompactionsOverTime(), false);
     sb.append("</td></tr>\n");
 
     sb.append("<tr><td>\n");
-    plotData(sb, "Index Cache Hit Rate", Monitor.getIndexCacheHitRateOverTime(), true);
+    plotData(sb, "Index Cache Hit Rate", monitor.getIndexCacheHitRateOverTime(), true);
     sb.append("</td><td>\n");
-    plotData(sb, "Data Cache Hit Rate", Monitor.getDataCacheHitRateOverTime(), true);
+    plotData(sb, "Data Cache Hit Rate", monitor.getDataCacheHitRateOverTime(), true);
     sb.append("</td></tr>\n");
 
     sb.append("</table>\n");
@@ -232,7 +233,7 @@ public class DefaultServlet extends BasicServlet {
 
   private void doAccumuloTable(StringBuilder sb) throws IOException {
     // Accumulo
-    MasterMonitorInfo info = Monitor.getMmi();
+    MasterMonitorInfo info = monitor.getMmi();
     sb.append("<table>\n");
     sb.append("<tr><th colspan='2'><a href='/master'>Accumulo Master</a></th></tr>\n");
     if (info == null) {
@@ -241,13 +242,13 @@ public class DefaultServlet extends BasicServlet {
 
       try {
         boolean highlight = false;
-        tableRow(sb, (highlight = !highlight), "<a href='/tables'>Tables</a>", NumberType.commas(Monitor.getTotalTables()));
+        tableRow(sb, (highlight = !highlight), "<a href='/tables'>Tables</a>", NumberType.commas(monitor.getTotalTables()));
         tableRow(sb, (highlight = !highlight), "<a href='/tservers'>Tablet&nbsp;Servers</a>", NumberType.commas(info.tServerInfo.size(), 1, Long.MAX_VALUE));
         tableRow(sb, (highlight = !highlight), "<a href='/tservers'>Dead&nbsp;Tablet&nbsp;Servers</a>", NumberType.commas(info.deadTabletServers.size(), 0, 0));
-        tableRow(sb, (highlight = !highlight), "Tablets", NumberType.commas(Monitor.getTotalTabletCount(), 1, Long.MAX_VALUE));
-        tableRow(sb, (highlight = !highlight), "Entries", NumberType.commas(Monitor.getTotalEntries()));
-        tableRow(sb, (highlight = !highlight), "Lookups", NumberType.commas(Monitor.getTotalLookups()));
-        tableRow(sb, (highlight = !highlight), "Uptime", Duration.format(System.currentTimeMillis() - Monitor.getStartTime()));
+        tableRow(sb, (highlight = !highlight), "Tablets", NumberType.commas(monitor.getTotalTabletCount(), 1, Long.MAX_VALUE));
+        tableRow(sb, (highlight = !highlight), "Entries", NumberType.commas(monitor.getTotalEntries()));
+        tableRow(sb, (highlight = !highlight), "Lookups", NumberType.commas(monitor.getTotalLookups()));
+        tableRow(sb, (highlight = !highlight), "Uptime", Duration.format(System.currentTimeMillis() - monitor.getStartTime()));
       } catch (Exception e) {
         log.debug(e, e);
       }

@@ -14,17 +14,11 @@
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-package org.apache.accumulo.core.threading;
+package org.apache.accumulo.monitor.servlets;
 
-import com.google.inject.AbstractModule;
-import java.util.concurrent.Executor;
-import java.util.concurrent.ExecutorService;
+import com.google.inject.servlet.ServletModule;
 
-public class ThreadingModule extends AbstractModule {
+public class MonitorServletsModule extends ServletModule {
   @Override
-  protected void configure() {
-    bind(ManagedThreadPool.class);
-    bind(Executor.class).to(ManagedThreadPool.class);
-    bind(ExecutorService.class).to(ManagedThreadPool.class);
-  }
+  public void configureServlets() {}
 }

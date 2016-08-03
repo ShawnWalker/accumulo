@@ -28,12 +28,13 @@ import javax.servlet.http.HttpServletResponse;
 import org.apache.accumulo.core.master.thrift.DeadServer;
 import org.apache.accumulo.core.master.thrift.TableInfo;
 import org.apache.accumulo.core.master.thrift.TabletServerStatus;
-import org.apache.accumulo.monitor.Monitor;
 import org.apache.accumulo.monitor.util.celltypes.TServerLinkType;
 import org.apache.accumulo.server.util.TableInfoUtil;
 
 import com.google.gson.Gson;
+import javax.inject.Singleton;
 
+@Singleton
 public class JSONServlet extends BasicServlet {
   private static final long serialVersionUID = 1L;
 
@@ -65,28 +66,28 @@ public class JSONServlet extends BasicServlet {
 
   @Override
   protected void pageBody(HttpServletRequest req, HttpServletResponse resp, StringBuilder sb) {
-    if (Monitor.getMmi() == null || Monitor.getMmi().tableMap == null) {
+    if (monitor.getMmi() == null || monitor.getMmi().tableMap == null) {
       return;
     }
 
     Map<String,Object> results = new HashMap<>();
     List<Map<String,Object>> servers = new ArrayList<>();
 
-    for (TabletServerStatus status : Monitor.getMmi().tServerInfo) {
+    for (TabletServerStatus status : monitor.getMmi().tServerInfo) {
       TableInfo summary = TableInfoUtil.summarizeTableStats(status);
       servers.add(addServer(status.name, TServerLinkType.displayName(status.name), status.osLoad, summary.ingestRate, summary.queryRate,
-          summary.ingestByteRate / 1000000.0, summary.queryByteRate / 1000000.0, summary.scans.running + summary.scans.queued, Monitor.getLookupRate(),
+          summary.ingestByteRate / 1000000.0, summary.queryByteRate / 1000000.0, summary.scans.running + summary.scans.queued, monitor.getLookupRate(),
           status.holdTime));
     }
 
-    for (Entry<String,Byte> entry : Monitor.getMmi().badTServers.entrySet()) {
+    for (Entry<String,Byte> entry : monitor.getMmi().badTServers.entrySet()) {
       Map<String,Object> badServer = new HashMap<>();
       badServer.put("ip", entry.getKey());
       badServer.put("bad", true);
       servers.add(badServer);
     }
 
-    for (DeadServer dead : Monitor.getMmi().deadTabletServers) {
+    for (DeadServer dead : monitor.getMmi().deadTabletServers) {
       Map<String,Object> deadServer = new HashMap<>();
       deadServer.put("ip", dead.server);
       deadServer.put("dead", true);

@@ -139,6 +139,19 @@ public class LifecycleManagerImpl implements TypeListener, LifecycleManager {
     }
 
     @Override
+    public boolean equals(Object rhsObject) {
+      if (!(rhsObject instanceof PredestroyTracker)) {
+        return false;
+      }
+      return ((PredestroyTracker) rhsObject).compareTo(this) == 0;
+    }
+
+    @Override
+    public int hashCode() {
+      return Long.hashCode(instanceId);
+    }
+
+    @Override
     public int compareTo(PredestroyTracker o) {
       // Compare in reverse order of creation.
       return Long.compare(o.instanceId, this.instanceId);

@@ -23,6 +23,7 @@ import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.TreeMap;
 import java.util.TreeSet;
+import javax.inject.Singleton;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -35,7 +36,6 @@ import org.apache.accumulo.core.master.thrift.TableInfo;
 import org.apache.accumulo.core.master.thrift.TabletServerStatus;
 import org.apache.accumulo.core.metadata.MetadataTable;
 import org.apache.accumulo.core.metadata.RootTable;
-import org.apache.accumulo.monitor.Monitor;
 import org.apache.accumulo.monitor.util.Table;
 import org.apache.accumulo.monitor.util.TableRow;
 import org.apache.accumulo.monitor.util.celltypes.CompactionsType;
@@ -49,6 +49,7 @@ import org.apache.accumulo.server.tables.TableManager;
 import org.apache.accumulo.server.util.TableInfoUtil;
 import org.apache.hadoop.io.Text;
 
+@Singleton
 public class TablesServlet extends BasicServlet {
 
   private static final long serialVersionUID = 1L;
@@ -60,7 +61,7 @@ public class TablesServlet extends BasicServlet {
 
   @Override
   protected void pageBody(HttpServletRequest req, HttpServletResponse response, StringBuilder sb) throws Exception {
-    Map<String,String> tidToNameMap = Tables.getIdToNameMap(Monitor.getContext().getInstance());
+    Map<String,String> tidToNameMap = Tables.getIdToNameMap(monitor.getContext().getInstance());
     String tableId = req.getParameter("t");
 
     doProblemsBanner(sb);
@@ -73,13 +74,13 @@ public class TablesServlet extends BasicServlet {
     doTableDetails(req, sb, tidToNameMap, tableId);
   }
 
-  static void doProblemsBanner(StringBuilder sb) {
-    int numProblems = Monitor.getProblemSummary().entrySet().size();
+  void doProblemsBanner(StringBuilder sb) {
+    int numProblems = monitor.getProblemSummary().entrySet().size();
     if (numProblems > 0)
       banner(sb, "error", String.format("<a href='/problems'>Table Problems: %d Total</a>", numProblems));
   }
 
-  static void doTableList(HttpServletRequest req, StringBuilder sb, Map<String,String> tidToNameMap) {
+  void doTableList(HttpServletRequest req, StringBuilder sb, Map<String,String> tidToNameMap) {
     Table tableList = new Table("tableList", "Table&nbsp;List");
     tableList.addSortableColumn("Table&nbsp;Name", new TableLinkType(), null);
     tableList.addSortableColumn("State", new TableStateType(), null);
@@ -108,14 +109,14 @@ public class TablesServlet extends BasicServlet {
             + "They reduce the number of files used during queries.");
     SortedMap<String,TableInfo> tableStats = new TreeMap<>();
 
-    if (Monitor.getMmi() != null && Monitor.getMmi().tableMap != null)
-      for (Entry<String,TableInfo> te : Monitor.getMmi().tableMap.entrySet())
+    if (monitor.getMmi() != null && monitor.getMmi().tableMap != null)
+      for (Entry<String,TableInfo> te : monitor.getMmi().tableMap.entrySet())
         tableStats.put(Tables.getPrintableTableNameFromId(tidToNameMap, te.getKey()), te.getValue());
 
-    Map<String,Double> compactingByTable = TableInfoUtil.summarizeTableStats(Monitor.getMmi());
+    Map<String,Double> compactingByTable = TableInfoUtil.summarizeTableStats(monitor.getMmi());
     TableManager tableManager = TableManager.getInstance();
 
-    for (Entry<String,String> tableName_tableId : Tables.getNameToIdMap(Monitor.getContext().getInstance()).entrySet()) {
+    for (Entry<String,String> tableName_tableId : Tables.getNameToIdMap(monitor.getContext().getInstance()).entrySet()) {
       String tableName = tableName_tableId.getKey();
       String tableId = tableName_tableId.getValue();
       TableInfo tableInfo = tableStats.get(tableName);
@@ -144,13 +145,13 @@ public class TablesServlet extends BasicServlet {
 
   private void doTableDetails(HttpServletRequest req, StringBuilder sb, Map<String,String> tidToNameMap, String tableId) {
     String displayName = Tables.getPrintableTableNameFromId(tidToNameMap, tableId);
-    Instance instance = Monitor.getContext().getInstance();
+    Instance instance = monitor.getContext().getInstance();
     TreeSet<String> locs = new TreeSet<>();
     if (RootTable.ID.equals(tableId)) {
       locs.add(instance.getRootTabletLocation());
     } else {
       String systemTableName = MetadataTable.ID.equals(tableId) ? RootTable.NAME : MetadataTable.NAME;
-      MetaDataTableScanner scanner = new MetaDataTableScanner(Monitor.getContext(), new Range(KeyExtent.getMetadataEntry(tableId, new Text()),
+      MetaDataTableScanner scanner = new MetaDataTableScanner(monitor.getContext(), new Range(KeyExtent.getMetadataEntry(tableId, new Text()),
           KeyExtent.getMetadataEntry(tableId, null)), systemTableName);
 
       while (scanner.hasNext()) {
@@ -169,8 +170,8 @@ public class TablesServlet extends BasicServlet {
     log.debug("Locs: " + locs);
 
     List<TabletServerStatus> tservers = new ArrayList<>();
-    if (Monitor.getMmi() != null) {
-      for (TabletServerStatus tss : Monitor.getMmi().tServerInfo) {
+    if (monitor.getMmi() != null) {
+      for (TabletServerStatus tss : monitor.getMmi().tServerInfo) {
         try {
           log.debug("tss: " + tss.name);
           if (tss.name != null && locs.contains(tss.name))

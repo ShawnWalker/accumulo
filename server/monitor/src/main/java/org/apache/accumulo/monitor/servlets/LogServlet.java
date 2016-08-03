@@ -17,13 +17,13 @@
 package org.apache.accumulo.monitor.servlets;
 
 import java.text.SimpleDateFormat;
+import javax.inject.Singleton;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.Property;
-import org.apache.accumulo.monitor.Monitor;
 import org.apache.accumulo.monitor.util.Table;
 import org.apache.accumulo.monitor.util.celltypes.DateTimeType;
 import org.apache.accumulo.monitor.util.celltypes.StringType;
@@ -32,6 +32,7 @@ import org.apache.accumulo.server.monitor.LogService;
 import org.apache.log4j.Level;
 import org.apache.log4j.spi.LoggingEvent;
 
+@Singleton
 public class LogServlet extends BasicServlet {
 
   private static final long serialVersionUID = 1L;
@@ -43,7 +44,7 @@ public class LogServlet extends BasicServlet {
 
   @Override
   protected void pageBody(HttpServletRequest req, HttpServletResponse resp, StringBuilder sb) {
-    AccumuloConfiguration conf = Monitor.getContext().getConfiguration();
+    AccumuloConfiguration conf = monitor.getContext().getConfiguration();
     boolean clear = true;
     final String dateFormatStr = conf.get(Property.MONITOR_LOG_DATE_FORMAT);
     SimpleDateFormat fmt;

@@ -26,7 +26,6 @@ import javax.inject.Singleton;
 import org.apache.accumulo.core.client.Instance;
 import org.apache.accumulo.core.conf.SiteConfiguration;
 import org.apache.accumulo.core.trace.DistributedTrace;
-import org.apache.accumulo.server.client.HdfsZooInstance;
 import org.apache.accumulo.server.conf.ServerConfigurationFactory;
 import org.apache.accumulo.server.fs.VolumeManager;
 import org.apache.accumulo.server.fs.VolumeManagerImpl;
@@ -39,13 +38,11 @@ public class ServerPrologue {
   private final String hostname;
   private final ServerConfigurationFactory conf;
   private final VolumeManager fs;
-  private final Instance instance;
 
   @Inject
-  ServerPrologue(@Named("app") String app, @Named("hostname") String hostname) throws IOException {
+  ServerPrologue(@Named("app") String app, @Named("hostname") String hostname, Instance instance) throws IOException {
     this.app = app;
     this.hostname = hostname;
-    this.instance = HdfsZooInstance.getInstance();
     SecurityUtil.serverLogin(SiteConfiguration.getInstance());
     Accumulo.setupLogging(app);
     this.conf = new ServerConfigurationFactory(instance);
@@ -82,17 +79,6 @@ public class ServerPrologue {
     @Override
     public VolumeManager get() {
       return prologue.fs;
-    }
-  }
-
-  @Singleton
-  public static class InstanceProvider implements Provider<Instance> {
-    @Inject
-    private ServerPrologue prologue;
-
-    @Override
-    public Instance get() {
-      return prologue.instance;
     }
   }
 }

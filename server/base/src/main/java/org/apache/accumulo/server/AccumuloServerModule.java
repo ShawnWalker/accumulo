@@ -18,7 +18,6 @@ package org.apache.accumulo.server;
 
 import com.google.inject.AbstractModule;
 import javax.inject.Singleton;
-import org.apache.accumulo.core.client.Instance;
 import org.apache.accumulo.core.client.impl.AccumuloClientModule;
 import org.apache.accumulo.core.inject.Requires;
 import org.apache.accumulo.server.client.ServerInstanceModule;
@@ -34,6 +33,5 @@ public class AccumuloServerModule extends AbstractModule {
     bind(ServerPrologue.class);
     bind(ServerConfigurationFactory.class).toProvider(ServerPrologue.ServerConfigurationFactoryProvider.class).in(Singleton.class);
     bind(VolumeManager.class).toProvider(ServerPrologue.VolumeManagerProvider.class).in(Singleton.class);
-    bind(Instance.class).toProvider(ServerPrologue.InstanceProvider.class).in(Singleton.class);
   }
 }

@@ -38,7 +38,6 @@ import org.apache.accumulo.core.client.security.tokens.KerberosToken;
 import org.apache.accumulo.core.client.security.tokens.PasswordToken;
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
 import org.apache.accumulo.core.conf.Property;
-import org.apache.accumulo.monitor.Monitor;
 import org.apache.accumulo.monitor.servlets.BasicServlet;
 import org.apache.accumulo.server.client.HdfsZooInstance;
 import org.apache.accumulo.server.security.SecurityUtil;
@@ -75,7 +74,7 @@ abstract class Basic extends BasicServlet {
   }
 
   protected Entry<Scanner,UserGroupInformation> getScanner(final StringBuilder sb) throws AccumuloException, AccumuloSecurityException {
-    AccumuloConfiguration conf = Monitor.getContext().getConfiguration();
+    AccumuloConfiguration conf = monitor.getContext().getConfiguration();
     final boolean saslEnabled = conf.getBoolean(Property.INSTANCE_RPC_SASL_ENABLED);
     UserGroupInformation traceUgi = null;
     final String principal;

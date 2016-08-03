@@ -26,6 +26,7 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.Date;
 import java.util.List;
+import javax.inject.Inject;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
@@ -49,16 +50,19 @@ abstract public class BasicServlet extends HttpServlet {
   private String bannerColor;
   private String bannerBackground;
 
+  @Inject
+  protected Monitor monitor;
+
   abstract protected String getTitle(HttpServletRequest req);
 
   @Override
   public void doGet(HttpServletRequest req, HttpServletResponse resp) throws ServletException, IOException {
     StringBuilder sb = new StringBuilder();
     try {
-      Monitor.fetchData();
-      bannerText = sanitize(Monitor.getContext().getConfiguration().get(Property.MONITOR_BANNER_TEXT));
-      bannerColor = Monitor.getContext().getConfiguration().get(Property.MONITOR_BANNER_COLOR).replace("'", "&#39;");
-      bannerBackground = Monitor.getContext().getConfiguration().get(Property.MONITOR_BANNER_BACKGROUND).replace("'", "&#39;");
+      monitor.fetchData();
+      bannerText = sanitize(monitor.getContext().getConfiguration().get(Property.MONITOR_BANNER_TEXT));
+      bannerColor = monitor.getContext().getConfiguration().get(Property.MONITOR_BANNER_COLOR).replace("'", "&#39;");
+      bannerBackground = monitor.getContext().getConfiguration().get(Property.MONITOR_BANNER_BACKGROUND).replace("'", "&#39;");
       pageStart(req, resp, sb);
       pageBody(req, resp, sb);
       pageEnd(req, resp, sb);
@@ -154,9 +158,9 @@ abstract public class BasicServlet extends HttpServlet {
     }
     sb.append("<div id='headertitle'>");
     sb.append("<h1>").append(getTitle(req)).append("</h1></div>\n");
-    sb.append("<div id='subheader'>Instance&nbsp;Name:&nbsp;").append(Monitor.cachedInstanceName.get()).append("&nbsp;&nbsp;&nbsp;Version:&nbsp;")
+    sb.append("<div id='subheader'>Instance&nbsp;Name:&nbsp;").append(monitor.cachedInstanceName.get()).append("&nbsp;&nbsp;&nbsp;Version:&nbsp;")
         .append(Constants.VERSION).append("\n");
-    sb.append("<br><span class='smalltext'>Instance&nbsp;ID:&nbsp;").append(Monitor.getContext().getInstance().getInstanceID()).append("</span>\n");
+    sb.append("<br><span class='smalltext'>Instance&nbsp;ID:&nbsp;").append(monitor.getContext().getInstance().getInstanceID()).append("</span>\n");
     sb.append("<br><span class='smalltext'>").append(new Date().toString().replace(" ", "&nbsp;")).append("</span>");
     sb.append("</div>\n"); // end <div id='subheader'>
     sb.append("</div>\n"); // end <div id='header'>
@@ -185,13 +189,13 @@ abstract public class BasicServlet extends HttpServlet {
     if (numLogs > 0)
       sb.append("<span class='" + (logsHaveError ? "error" : "warning") + "'><a href='/log'>Recent&nbsp;Logs&nbsp;<span class='smalltext'>(" + numLogs
           + ")</a></span></span><br />\n");
-    int numProblems = Monitor.getProblemSummary().entrySet().size();
+    int numProblems = monitor.getProblemSummary().entrySet().size();
     if (numProblems > 0)
       sb.append("<span class='error'><a href='/problems'>Table&nbsp;Problems&nbsp;<span class='smalltext'>(" + numProblems + ")</a></span></span><br />\n");
     sb.append("<hr />\n");
     sb.append("<a href='/xml'>XML</a><br />\n");
     sb.append("<a href='/json'>JSON</a><hr />\n");
-    if (Monitor.isUsingSsl())
+    if (monitor.isUsingSsl())
       sb.append("<a href='/shell'>Shell</a><hr />\n");
     sb.append("<div class='smalltext'>[<a href='").append("/op?action=refresh&value=").append(refresh < 1 ? "5" : "-1");
     sb.append("&redir=").append(currentPage(req)).append("'>");

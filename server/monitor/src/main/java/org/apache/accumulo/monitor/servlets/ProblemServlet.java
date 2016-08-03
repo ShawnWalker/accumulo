@@ -21,12 +21,12 @@ import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.Map.Entry;
+import javax.inject.Singleton;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.accumulo.core.client.impl.Tables;
-import org.apache.accumulo.monitor.Monitor;
 import org.apache.accumulo.monitor.util.Table;
 import org.apache.accumulo.monitor.util.TableRow;
 import org.apache.accumulo.monitor.util.celltypes.CellType;
@@ -37,6 +37,7 @@ import org.apache.accumulo.server.problems.ProblemReport;
 import org.apache.accumulo.server.problems.ProblemReports;
 import org.apache.accumulo.server.problems.ProblemType;
 
+@Singleton
 public class ProblemServlet extends BasicServlet {
 
   private static final long serialVersionUID = 1L;
@@ -48,13 +49,13 @@ public class ProblemServlet extends BasicServlet {
 
   @Override
   protected void pageBody(final HttpServletRequest req, HttpServletResponse resp, StringBuilder sb) {
-    Map<String,String> tidToNameMap = Tables.getIdToNameMap(Monitor.getContext().getInstance());
+    Map<String,String> tidToNameMap = Tables.getIdToNameMap(monitor.getContext().getInstance());
     doProblemSummary(req, sb, tidToNameMap);
     doProblemDetails(req, sb, req.getParameter("table"), tidToNameMap);
   }
 
-  private static void doProblemSummary(final HttpServletRequest req, StringBuilder sb, final Map<String,String> tidToNameMap) {
-    if (Monitor.getProblemSummary().isEmpty() && Monitor.getProblemException() == null)
+  private void doProblemSummary(final HttpServletRequest req, StringBuilder sb, final Map<String,String> tidToNameMap) {
+    if (monitor.getProblemSummary().isEmpty() && monitor.getProblemException() == null)
       return;
 
     Table problemSummary = new Table("problemSummary", "Problem&nbsp;Summary", "error");
@@ -63,10 +64,10 @@ public class ProblemServlet extends BasicServlet {
       problemSummary.addSortableColumn(type.name(), new NumberType<Integer>(), null);
     problemSummary.addUnsortableColumn("Operations", new ClearTableProblemsLinkType(req, tidToNameMap), null);
 
-    if (Monitor.getProblemException() != null) {
+    if (monitor.getProblemException() != null) {
       StringBuilder cell = new StringBuilder();
-      cell.append("<b>Failed to obtain problem reports</b> : " + Monitor.getProblemException().getMessage());
-      Throwable cause = Monitor.getProblemException().getCause();
+      cell.append("<b>Failed to obtain problem reports</b> : " + monitor.getProblemException().getMessage());
+      Throwable cause = monitor.getProblemException().getCause();
       while (cause != null) {
         if (cause.getMessage() != null)
           cell.append("<br />\n caused by : " + cause.getMessage());
@@ -74,7 +75,7 @@ public class ProblemServlet extends BasicServlet {
       }
       problemSummary.setSubCaption(cell.toString());
     } else {
-      for (Entry<String,Map<ProblemType,Integer>> entry : Monitor.getProblemSummary().entrySet()) {
+      for (Entry<String,Map<ProblemType,Integer>> entry : monitor.getProblemSummary().entrySet()) {
         TableRow row = problemSummary.prepareRow();
         row.add(entry.getKey());
         for (ProblemType pt : ProblemType.values()) {
@@ -88,14 +89,14 @@ public class ProblemServlet extends BasicServlet {
     problemSummary.generate(req, sb);
   }
 
-  private static void doProblemDetails(final HttpServletRequest req, StringBuilder sb, String tableId, Map<String,String> tidToNameMap) {
+  private void doProblemDetails(final HttpServletRequest req, StringBuilder sb, String tableId, Map<String,String> tidToNameMap) {
 
-    if (Monitor.getProblemException() != null)
+    if (monitor.getProblemException() != null)
       return;
 
     ArrayList<ProblemReport> problemReports = new ArrayList<>();
-    Iterator<ProblemReport> iter = tableId == null ? ProblemReports.getInstance(Monitor.getContext()).iterator() : ProblemReports.getInstance(
-        Monitor.getContext()).iterator(tableId);
+    Iterator<ProblemReport> iter = tableId == null ? ProblemReports.getInstance(monitor.getContext()).iterator() : ProblemReports.getInstance(
+        monitor.getContext()).iterator(tableId);
     while (iter.hasNext())
       problemReports.add(iter.next());
     final SimpleDateFormat sdf = new SimpleDateFormat("yyyy/MM/dd HH:mm:ss zzz");

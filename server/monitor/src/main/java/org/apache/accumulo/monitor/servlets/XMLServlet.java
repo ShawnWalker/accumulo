@@ -21,6 +21,7 @@ import static java.nio.charset.StandardCharsets.UTF_8;
 import java.util.Map.Entry;
 import java.util.SortedMap;
 import java.util.TreeMap;
+import javax.inject.Singleton;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
@@ -31,11 +32,11 @@ import org.apache.accumulo.core.master.thrift.Compacting;
 import org.apache.accumulo.core.master.thrift.DeadServer;
 import org.apache.accumulo.core.master.thrift.TableInfo;
 import org.apache.accumulo.core.master.thrift.TabletServerStatus;
-import org.apache.accumulo.monitor.Monitor;
 import org.apache.accumulo.monitor.util.celltypes.TServerLinkType;
 import org.apache.accumulo.server.master.state.TabletServerState;
 import org.apache.accumulo.server.util.TableInfoUtil;
 
+@Singleton
 public class XMLServlet extends BasicServlet {
   private static final long serialVersionUID = 1L;
 
@@ -59,13 +60,13 @@ public class XMLServlet extends BasicServlet {
     long totalEntries = 0L;
 
     sb.append("\n<servers>\n");
-    if (Monitor.getMmi() == null || Monitor.getMmi().tableMap == null) {
+    if (monitor.getMmi() == null || monitor.getMmi().tableMap == null) {
       sb.append("</servers>\n");
       return;
     }
-    SortedMap<String,TableInfo> tableStats = new TreeMap<>(Monitor.getMmi().tableMap);
+    SortedMap<String,TableInfo> tableStats = new TreeMap<>(monitor.getMmi().tableMap);
 
-    for (TabletServerStatus status : Monitor.getMmi().tServerInfo) {
+    for (TabletServerStatus status : monitor.getMmi().tServerInfo) {
 
       sb.append("\n<server id='").append(status.name).append("'>\n");
       sb.append("<hostname>").append(TServerLinkType.displayName(status.name)).append("</hostname>");
@@ -87,7 +88,7 @@ public class XMLServlet extends BasicServlet {
       sb.append("<ingestMB>").append(summary.ingestByteRate / 1000000.0).append("</ingestMB>\n");
       sb.append("<queryMB>").append(summary.queryByteRate / 1000000.0).append("</queryMB>\n");
       sb.append("<scans>").append(summary.scans.running + summary.scans.queued).append("</scans>");
-      sb.append("<scansessions>").append(Monitor.getLookupRate()).append("</scansessions>\n");
+      sb.append("<scansessions>").append(monitor.getLookupRate()).append("</scansessions>\n");
       sb.append("<holdtime>").append(status.holdTime).append("</holdtime>\n");
       totalIngest += summary.ingestRate;
       totalQuery += summary.queryRate;
@@ -96,37 +97,37 @@ public class XMLServlet extends BasicServlet {
     }
     sb.append("\n</servers>\n");
 
-    sb.append("\n<masterGoalState>" + Monitor.getMmi().goalState + "</masterGoalState>\n");
-    sb.append("\n<masterState>" + Monitor.getMmi().state + "</masterState>\n");
+    sb.append("\n<masterGoalState>" + monitor.getMmi().goalState + "</masterGoalState>\n");
+    sb.append("\n<masterState>" + monitor.getMmi().state + "</masterState>\n");
 
     sb.append("\n<badTabletServers>\n");
-    for (Entry<String,Byte> entry : Monitor.getMmi().badTServers.entrySet()) {
+    for (Entry<String,Byte> entry : monitor.getMmi().badTServers.entrySet()) {
       sb.append(String.format("<badTabletServer id='%s' status='%s'/>\n", entry.getKey(), TabletServerState.getStateById(entry.getValue())));
     }
     sb.append("\n</badTabletServers>\n");
 
     sb.append("\n<tabletServersShuttingDown>\n");
-    for (String server : Monitor.getMmi().serversShuttingDown) {
+    for (String server : monitor.getMmi().serversShuttingDown) {
       sb.append(String.format("<server id='%s'/>\n", server));
     }
     sb.append("\n</tabletServersShuttingDown>\n");
 
-    sb.append(String.format("\n<unassignedTablets>%d</unassignedTablets>\n", Monitor.getMmi().unassignedTablets));
+    sb.append(String.format("\n<unassignedTablets>%d</unassignedTablets>\n", monitor.getMmi().unassignedTablets));
 
     sb.append("\n<deadTabletServers>\n");
-    for (DeadServer dead : Monitor.getMmi().deadTabletServers) {
+    for (DeadServer dead : monitor.getMmi().deadTabletServers) {
       sb.append(String.format("<deadTabletServer id='%s' lastChange='%d' status='%s'/>\n", dead.server, dead.lastStatus, dead.status));
     }
     sb.append("\n</deadTabletServers>\n");
 
     sb.append("\n<deadLoggers>\n");
-    for (DeadServer dead : Monitor.getMmi().deadTabletServers) {
+    for (DeadServer dead : monitor.getMmi().deadTabletServers) {
       sb.append(String.format("<deadLogger id='%s' lastChange='%d' status='%s'/>\n", dead.server, dead.lastStatus, dead.status));
     }
     sb.append("\n</deadLoggers>\n");
 
     sb.append("\n<tables>\n");
-    Instance instance = Monitor.getContext().getInstance();
+    Instance instance = monitor.getContext().getInstance();
     for (Entry<String,TableInfo> entry : tableStats.entrySet()) {
       TableInfo tableInfo = entry.getValue();
 

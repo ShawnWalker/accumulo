@@ -18,13 +18,13 @@ package org.apache.accumulo.monitor.servlets;
 
 import java.io.IOException;
 import java.util.List;
+import javax.inject.Singleton;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.accumulo.core.master.thrift.BulkImportStatus;
 import org.apache.accumulo.core.master.thrift.TabletServerStatus;
-import org.apache.accumulo.monitor.Monitor;
 import org.apache.accumulo.monitor.util.Table;
 import org.apache.accumulo.monitor.util.TableRow;
 import org.apache.accumulo.monitor.util.celltypes.BulkImportStateType;
@@ -32,6 +32,7 @@ import org.apache.accumulo.monitor.util.celltypes.DurationType;
 import org.apache.accumulo.monitor.util.celltypes.PreciseNumberType;
 import org.apache.accumulo.monitor.util.celltypes.TServerLinkType;
 
+@Singleton
 public class BulkImportServlet extends BasicServlet {
 
   private static final long serialVersionUID = 1L;
@@ -51,7 +52,7 @@ public class BulkImportServlet extends BasicServlet {
     table.addSortableColumn("Directory");
     table.addSortableColumn("Age", new DurationType(0l, 5 * 60 * 1000l), "The age the import.");
     table.addSortableColumn("State", new BulkImportStateType(), "The current state of the bulk import");
-    for (BulkImportStatus bulk : Monitor.getMmi().bulkImports) {
+    for (BulkImportStatus bulk : monitor.getMmi().bulkImports) {
       TableRow row = table.prepareRow();
       row.add(bulk.filename);
       row.add(duration(bulk.startTime));
@@ -64,7 +65,7 @@ public class BulkImportServlet extends BasicServlet {
     table.addSortableColumn("Server", new TServerLinkType(), null);
     table.addSortableColumn("#", new PreciseNumberType(0, 20, 0, 100), "Number of imports presently running");
     table.addSortableColumn("Oldest&nbsp;Age", new DurationType(0l, 5 * 60 * 1000l), "The age of the oldest import running on this server.");
-    for (TabletServerStatus tserverInfo : Monitor.getMmi().getTServerInfo()) {
+    for (TabletServerStatus tserverInfo : monitor.getMmi().getTServerInfo()) {
       TableRow row = table.prepareRow();
       row.add(tserverInfo);
       List<BulkImportStatus> stats = tserverInfo.bulkImports;

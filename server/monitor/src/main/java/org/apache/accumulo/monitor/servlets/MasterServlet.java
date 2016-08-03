@@ -35,7 +35,6 @@ import org.apache.accumulo.core.master.thrift.MasterState;
 import org.apache.accumulo.core.master.thrift.RecoveryStatus;
 import org.apache.accumulo.core.master.thrift.TabletServerStatus;
 import org.apache.accumulo.core.util.AddressUtil;
-import org.apache.accumulo.monitor.Monitor;
 import org.apache.accumulo.monitor.util.Table;
 import org.apache.accumulo.monitor.util.TableRow;
 import org.apache.accumulo.monitor.util.celltypes.DurationType;
@@ -48,26 +47,31 @@ import org.apache.accumulo.server.monitor.LogService;
 import org.apache.log4j.Level;
 
 import com.google.common.base.Joiner;
+import javax.inject.Inject;
+import javax.inject.Singleton;
 
+@Singleton
 public class MasterServlet extends BasicServlet {
-
   private static final long serialVersionUID = 1L;
+
+  @Inject
+  private TablesServlet tablesServlet;
 
   @Override
   protected String getTitle(HttpServletRequest req) {
-    List<String> masters = Monitor.getContext().getInstance().getMasterLocations();
+    List<String> masters = monitor.getContext().getInstance().getMasterLocations();
     return "Master Server" + (masters.size() == 0 ? "" : ":" + AddressUtil.parseAddress(masters.get(0), false).getHostText());
   }
 
   @Override
   protected void pageBody(HttpServletRequest req, HttpServletResponse response, StringBuilder sb) throws IOException {
-    Map<String,String> tidToNameMap = Tables.getIdToNameMap(Monitor.getContext().getInstance());
+    Map<String,String> tidToNameMap = Tables.getIdToNameMap(monitor.getContext().getInstance());
 
     doLogEventBanner(sb);
-    TablesServlet.doProblemsBanner(sb);
+    tablesServlet.doProblemsBanner(sb);
     doMasterStatus(req, sb);
     doRecoveryList(req, sb);
-    TablesServlet.doTableList(req, sb, tidToNameMap);
+    tablesServlet.doTableList(req, sb, tidToNameMap);
   }
 
   private void doLogEventBanner(StringBuilder sb) {
@@ -92,44 +96,44 @@ public class MasterServlet extends BasicServlet {
 
   private void doMasterStatus(HttpServletRequest req, StringBuilder sb) throws IOException {
 
-    if (Monitor.getMmi() != null) {
+    if (monitor.getMmi() != null) {
       String gcStatus = "Waiting";
-      if (Monitor.getGcStatus() != null) {
+      if (monitor.getGcStatus() != null) {
         long start = 0;
         String label = "";
-        if (Monitor.getGcStatus().current.started != 0 || Monitor.getGcStatus().currentLog.started != 0) {
-          start = Math.max(Monitor.getGcStatus().current.started, Monitor.getGcStatus().currentLog.started);
+        if (monitor.getGcStatus().current.started != 0 || monitor.getGcStatus().currentLog.started != 0) {
+          start = Math.max(monitor.getGcStatus().current.started, monitor.getGcStatus().currentLog.started);
           label = "Running";
-        } else if (Monitor.getGcStatus().lastLog.finished != 0) {
-          start = Monitor.getGcStatus().lastLog.finished;
+        } else if (monitor.getGcStatus().lastLog.finished != 0) {
+          start = monitor.getGcStatus().lastLog.finished;
         }
         if (start != 0) {
           long diff = System.currentTimeMillis() - start;
           gcStatus = label + " " + DateFormat.getInstance().format(new Date(start));
           gcStatus = gcStatus.replace(" ", "&nbsp;");
-          long normalDelay = Monitor.getContext().getConfiguration().getTimeInMillis(Property.GC_CYCLE_DELAY);
+          long normalDelay = monitor.getContext().getConfiguration().getTimeInMillis(Property.GC_CYCLE_DELAY);
           if (diff > normalDelay * 2)
             gcStatus = "<span class='warning'>" + gcStatus + "</span>";
         }
       } else {
         gcStatus = "<span class='error'>Down</span>";
       }
-      if (Monitor.getMmi().state != MasterState.NORMAL) {
-        sb.append("<span class='warning'>Master State: " + Monitor.getMmi().state.name() + " Goal: " + Monitor.getMmi().goalState.name() + "</span>\n");
+      if (monitor.getMmi().state != MasterState.NORMAL) {
+        sb.append("<span class='warning'>Master State: " + monitor.getMmi().state.name() + " Goal: " + monitor.getMmi().goalState.name() + "</span>\n");
       }
-      if (Monitor.getMmi().serversShuttingDown != null && Monitor.getMmi().serversShuttingDown.size() > 0 && Monitor.getMmi().state == MasterState.NORMAL) {
-        sb.append("<span class='warning'>Servers being stopped: " + Joiner.on(", ").join(Monitor.getMmi().serversShuttingDown) + "</span>\n");
+      if (monitor.getMmi().serversShuttingDown != null && monitor.getMmi().serversShuttingDown.size() > 0 && monitor.getMmi().state == MasterState.NORMAL) {
+        sb.append("<span class='warning'>Servers being stopped: " + Joiner.on(", ").join(monitor.getMmi().serversShuttingDown) + "</span>\n");
       }
 
       int guessHighLoad = ManagementFactory.getOperatingSystemMXBean().getAvailableProcessors();
       List<String> slaves = new ArrayList<>();
-      for (TabletServerStatus up : Monitor.getMmi().tServerInfo) {
+      for (TabletServerStatus up : monitor.getMmi().tServerInfo) {
         slaves.add(up.name);
       }
-      for (DeadServer down : Monitor.getMmi().deadTabletServers) {
+      for (DeadServer down : monitor.getMmi().deadTabletServers) {
         slaves.add(down.server);
       }
-      List<String> masters = Monitor.getContext().getInstance().getMasterLocations();
+      List<String> masters = monitor.getContext().getInstance().getMasterLocations();
 
       Table masterStatus = new Table("masterStatus", "Master&nbsp;Status");
       masterStatus.addSortableColumn("Master", new StringType<String>(), "The hostname of the master server");
@@ -151,16 +155,16 @@ public class MasterServlet extends BasicServlet {
           "The one-minute load average on the computer that runs the monitor web server.");
       TableRow row = masterStatus.prepareRow();
       row.add(masters.size() == 0 ? "<div class='error'>Down</div>" : AddressUtil.parseAddress(masters.get(0), false).getHostText());
-      row.add(Monitor.getMmi().tServerInfo.size());
+      row.add(monitor.getMmi().tServerInfo.size());
       row.add(slaves.size());
       row.add("<a href='/gc'>" + gcStatus + "</a>");
-      row.add(Monitor.getTotalTabletCount());
-      row.add(Monitor.getMmi().unassignedTablets);
-      row.add(Monitor.getTotalEntries());
-      row.add(Math.round(Monitor.getTotalIngestRate()));
-      row.add(Math.round(Monitor.getTotalScanRate()));
-      row.add(Math.round(Monitor.getTotalQueryRate()));
-      row.add(Monitor.getTotalHoldTime());
+      row.add(monitor.getTotalTabletCount());
+      row.add(monitor.getMmi().unassignedTablets);
+      row.add(monitor.getTotalEntries());
+      row.add(Math.round(monitor.getTotalIngestRate()));
+      row.add(Math.round(monitor.getTotalScanRate()));
+      row.add(Math.round(monitor.getTotalQueryRate()));
+      row.add(monitor.getTotalHoldTime());
       row.add(ManagementFactory.getOperatingSystemMXBean().getSystemLoadAverage());
       masterStatus.addRow(row);
       masterStatus.generate(req, sb);
@@ -170,7 +174,7 @@ public class MasterServlet extends BasicServlet {
   }
 
   private void doRecoveryList(HttpServletRequest req, StringBuilder sb) {
-    MasterMonitorInfo mmi = Monitor.getMmi();
+    MasterMonitorInfo mmi = monitor.getMmi();
     if (mmi != null) {
       Table recoveryTable = new Table("logRecovery", "Log&nbsp;Recovery");
       recoveryTable.setSubCaption("Some tablets were unloaded in an unsafe manner. Write-ahead logs are being recovered.");

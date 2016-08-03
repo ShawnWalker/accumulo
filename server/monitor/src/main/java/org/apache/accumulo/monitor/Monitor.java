@@ -60,24 +60,6 @@ import org.apache.accumulo.fate.util.LoggingRunnable;
 import org.apache.accumulo.fate.zookeeper.ZooLock.LockLossReason;
 import org.apache.accumulo.fate.zookeeper.ZooUtil.NodeExistsPolicy;
 import org.apache.accumulo.fate.zookeeper.ZooUtil.NodeMissingPolicy;
-import org.apache.accumulo.monitor.servlets.BulkImportServlet;
-import org.apache.accumulo.monitor.servlets.DefaultServlet;
-import org.apache.accumulo.monitor.servlets.GcStatusServlet;
-import org.apache.accumulo.monitor.servlets.JSONServlet;
-import org.apache.accumulo.monitor.servlets.LogServlet;
-import org.apache.accumulo.monitor.servlets.MasterServlet;
-import org.apache.accumulo.monitor.servlets.OperationServlet;
-import org.apache.accumulo.monitor.servlets.ProblemServlet;
-import org.apache.accumulo.monitor.servlets.ReplicationServlet;
-import org.apache.accumulo.monitor.servlets.ScanServlet;
-import org.apache.accumulo.monitor.servlets.ShellServlet;
-import org.apache.accumulo.monitor.servlets.TServersServlet;
-import org.apache.accumulo.monitor.servlets.TablesServlet;
-import org.apache.accumulo.monitor.servlets.VisServlet;
-import org.apache.accumulo.monitor.servlets.XMLServlet;
-import org.apache.accumulo.monitor.servlets.trace.ListType;
-import org.apache.accumulo.monitor.servlets.trace.ShowTrace;
-import org.apache.accumulo.monitor.servlets.trace.Summary;
 import org.apache.accumulo.server.AccumuloServerContext;
 import org.apache.accumulo.server.ServerOpts;
 import org.apache.accumulo.server.client.HdfsZooInstance;
@@ -98,6 +80,7 @@ import org.slf4j.LoggerFactory;
 import com.google.common.net.HostAndPort;
 import com.google.inject.Injector;
 import com.google.inject.name.Names;
+import com.google.inject.servlet.GuiceFilter;
 import javax.inject.Inject;
 import javax.inject.Singleton;
 import org.apache.accumulo.core.inject.InjectorBuilder;
@@ -122,7 +105,7 @@ public class Monitor {
   private int totalTables = 0;
 
   private static class MaxList<T> extends LinkedList<Pair<Long,T>> {
-    private final long serialVersionUID = 1L;
+    private final static long serialVersionUID = 1L;
 
     private long maxDelta;
 
@@ -172,19 +155,20 @@ public class Monitor {
   private AccumuloServerContext context;
 
   private EmbeddedWebServer server;
-
+  private GuiceFilter guiceFilter;
   private ZooLock monitorLock;
 
   private final String DEFAULT_INSTANCE_NAME = "(Unavailable)";
   public final AtomicReference<String> cachedInstanceName = new AtomicReference<>(DEFAULT_INSTANCE_NAME);
 
   @Inject
-  Monitor(Instance instance, ServerConfigurationFactory config) {
+  Monitor(Instance instance, ServerConfigurationFactory config, GuiceFilter guiceFilter) {
     this.instance = instance;
     this.config = config;
-    this.context = new AccumuloServerContext(config);    
+    this.context = new AccumuloServerContext(config);
+    this.guiceFilter = guiceFilter;
   }
-  
+
   private static class EventCounter {
 
     Map<String,Pair<Long,Long>> prevSamples = new HashMap<>();
@@ -258,13 +242,13 @@ public class Monitor {
     if (currentTime - lastRecalc.get() < REFRESH_TIME * 1000)
       return;
 
-    synchronized (Monitor.class) {
+    synchronized (this) {
       // Learn our instance name asynchronously so we don't hang up if zookeeper is down
       if (cachedInstanceName.get().equals(DEFAULT_INSTANCE_NAME)) {
         SimpleTimer.getInstance(config.getConfiguration()).schedule(new TimerTask() {
           @Override
           public void run() {
-            synchronized (Monitor.class) {
+            synchronized (Monitor.this) {
               if (cachedInstanceName.get().equals(DEFAULT_INSTANCE_NAME)) {
                 final String instanceName = HdfsZooInstance.getInstance().getInstanceName();
                 if (null != instanceName) {
@@ -277,7 +261,7 @@ public class Monitor {
       }
     }
 
-    synchronized (Monitor.class) {
+    synchronized (this) {
       if (fetching)
         return;
       fetching = true;
@@ -390,7 +374,7 @@ public class Monitor {
       }
 
     } finally {
-      synchronized (Monitor.class) {
+      synchronized (this) {
         fetching = false;
         lastRecalc.set(currentTime);
       }
@@ -438,11 +422,9 @@ public class Monitor {
     opts.parseArgs(app, args);
     String hostname = opts.getAddress();
 
-    Injector injector=InjectorBuilder.newRoot().add(MonitorModule.class)
-            .bindInstance(Names.named("app"), String.class, app)
-            .bindInstance(Names.named("hostname"), String.class, hostname)
-            .build();
-    Monitor monitor = injector.getInstance(Monitor.class);    
+    Injector injector = InjectorBuilder.newRoot().add(MonitorModule.class).bindInstance(Names.named("app"), String.class, app)
+        .bindInstance(Names.named("hostname"), String.class, hostname).build();
+    Monitor monitor = injector.getInstance(Monitor.class);
     log.info("Instance " + monitor.instance.getInstanceID());
     try {
       monitor.run(hostname);
@@ -467,26 +449,7 @@ public class Monitor {
       try {
         log.debug("Creating monitor on port " + port);
         server = new EmbeddedWebServer(hostname, port, context.getConfiguration());
-        server.addServlet(DefaultServlet.class, "/");
-        server.addServlet(OperationServlet.class, "/op");
-        server.addServlet(MasterServlet.class, "/master");
-        server.addServlet(TablesServlet.class, "/tables");
-        server.addServlet(TServersServlet.class, "/tservers");
-        server.addServlet(ProblemServlet.class, "/problems");
-        server.addServlet(GcStatusServlet.class, "/gc");
-        server.addServlet(LogServlet.class, "/log");
-        server.addServlet(XMLServlet.class, "/xml");
-        server.addServlet(JSONServlet.class, "/json");
-        server.addServlet(VisServlet.class, "/vis");
-        server.addServlet(ScanServlet.class, "/scans");
-        server.addServlet(BulkImportServlet.class, "/bulkImports");
-        server.addServlet(Summary.class, "/trace/summary");
-        server.addServlet(ListType.class, "/trace/listType");
-        server.addServlet(ShowTrace.class, "/trace/show");
-        server.addServlet(ReplicationServlet.class, "/replication");
-        if (server.isUsingSsl())
-          server.addServlet(ShellServlet.class, "/shell");
-        server.start();
+        server.start(guiceFilter);
         break;
       } catch (Throwable ex) {
         log.error("Unable to start embedded web server", ex);

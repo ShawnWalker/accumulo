@@ -16,6 +16,9 @@
  */
 package org.apache.accumulo.monitor;
 
+import java.util.EnumSet;
+import javax.servlet.DispatcherType;
+import javax.servlet.Filter;
 import javax.servlet.http.HttpServlet;
 
 import org.apache.accumulo.core.conf.AccumuloConfiguration;
@@ -27,6 +30,7 @@ import org.eclipse.jetty.server.HttpConnectionFactory;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.session.SessionHandler;
+import org.eclipse.jetty.servlet.FilterHolder;
 import org.eclipse.jetty.servlet.ServletContextHandler;
 import org.eclipse.jetty.util.security.Constraint;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
@@ -82,10 +86,13 @@ public class EmbeddedWebServer {
 
     handler = new ServletContextHandler(server, "/", new SessionHandler(), new ConstraintSecurityHandler(), null, null);
     disableTrace("/");
+
+    // Even though the filter handles everything, Jetty requires at least one servlet.
+    handler.addServlet(DummyServlet.class, "/");
   }
 
-  public void addServlet(Class<? extends HttpServlet> klass, String where) {
-    handler.addServlet(klass, where);
+  private static class DummyServlet extends HttpServlet {
+    public static final long serialVersionUID = 1L;
   }
 
   private void disableTrace(String where) {
@@ -106,8 +113,11 @@ public class EmbeddedWebServer {
     return connector.getLocalPort();
   }
 
-  public void start() {
+  public void start(Filter filter) {
     try {
+      FilterHolder fh = new FilterHolder();
+      fh.setFilter(filter);
+      handler.addFilter(fh, "/*", EnumSet.allOf(DispatcherType.class));
       server.addConnector(connector);
       server.setHandler(handler);
       server.start();

@@ -17,17 +17,18 @@
 package org.apache.accumulo.monitor.servlets;
 
 import java.text.SimpleDateFormat;
+import javax.inject.Singleton;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.apache.accumulo.core.gc.thrift.GCStatus;
-import org.apache.accumulo.monitor.Monitor;
 import org.apache.accumulo.monitor.util.Table;
 import org.apache.accumulo.monitor.util.celltypes.DateTimeType;
 import org.apache.accumulo.monitor.util.celltypes.DurationType;
 import org.apache.accumulo.monitor.util.celltypes.NumberType;
 
+@Singleton
 public class GcStatusServlet extends BasicServlet {
 
   private static final long serialVersionUID = 1L;
@@ -39,7 +40,7 @@ public class GcStatusServlet extends BasicServlet {
 
   @Override
   protected void pageBody(HttpServletRequest req, HttpServletResponse resp, StringBuilder sb) {
-    GCStatus status = Monitor.getGcStatus();
+    GCStatus status = monitor.getGcStatus();
 
     if (status != null) {
       Table gcActivity = new Table("gcActivity", "Collection&nbsp;Activity");
